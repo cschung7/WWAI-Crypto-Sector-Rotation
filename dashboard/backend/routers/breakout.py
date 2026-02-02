@@ -159,8 +159,30 @@ def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25", min_pri
     """
     crossover_tickers = []
 
-    # Return empty if no price data available (cloud deployment)
+    # Use cached data if no price data available (cloud deployment)
     if not HAS_PRICE_DATA:
+        cache_file = DATA_DIR / "bb_crossover_candidates.json"
+        if cache_file.exists():
+            try:
+                with open(cache_file) as f:
+                    cached = json.load(f)
+                    category_map = get_category_mapping()
+                    for t in cached.get('tickers', [])[:limit]:
+                        ticker = t.get('ticker', '')
+                        ticker_clean = t.get('ticker_clean', ticker.replace('-USD', ''))
+                        crossover_tickers.append({
+                            'ticker': ticker,
+                            'ticker_clean': ticker_clean,
+                            'category': category_map.get(ticker.upper(), category_map.get(ticker_clean.upper(), '')),
+                            'close': t.get('close', 0),
+                            'upper_band': t.get('upper_band', 0),
+                            'deviation_pct': t.get('deviation_pct', 0),
+                            'signal': 'BB Crossover',
+                            'stage': 'Super Trend',
+                            'priority': 'HIGH'
+                        })
+            except Exception as e:
+                print(f"Error loading cached BB data: {e}")
         return crossover_tickers
 
     # Get list of price files

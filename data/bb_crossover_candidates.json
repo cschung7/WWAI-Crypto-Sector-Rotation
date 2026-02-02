@@ -1,0 +1,58 @@
+{
+  "generated": "2026-02-02T17:08:31.977433",
+  "count": 6,
+  "min_date": "2026-01-25",
+  "min_price": 5.0,
+  "bb_period": 220,
+  "bb_std": 2.0,
+  "tickers": [
+    {
+      "ticker": "VNXAU-USD",
+      "ticker_clean": "VNXAU",
+      "close": 176.4281,
+      "upper_band": 153.9632,
+      "deviation_pct": 14.59,
+      "last_date": "2026-01-29"
+    },
+    {
+      "ticker": "PAXG-USD",
+      "ticker_clean": "PAXG",
+      "close": 5466.9209,
+      "upper_band": 4775.8502,
+      "deviation_pct": 14.47,
+      "last_date": "2026-01-29"
+    },
+    {
+      "ticker": "XAUT-USD",
+      "ticker_clean": "XAUT",
+      "close": 5440.8491,
+      "upper_band": 4761.5992,
+      "deviation_pct": 14.27,
+      "last_date": "2026-01-29"
+    },
+    {
+      "ticker": "CGO-USD",
+      "ticker_clean": "CGO",
+      "close": 173.894,
+      "upper_band": 152.8645,
+      "deviation_pct": 13.76,
+      "last_date": "2026-01-29"
+    },
+    {
+      "ticker": "INSURANCE-USD",
+      "ticker_clean": "INSURANCE",
+      "close": 297.5024,
+      "upper_band": 280.5706,
+      "deviation_pct": 6.03,
+      "last_date": "2026-01-29"
+    },
+    {
+      "ticker": "MGC29839-USD",
+      "ticker_clean": "MGC29839",
+      "close": 7.9269,
+      "upper_band": 7.4784,
+      "deviation_pct": 6.0,
+      "last_date": "2026-01-29"
+    }
+  ]
+}
