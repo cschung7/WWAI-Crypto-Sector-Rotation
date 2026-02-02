@@ -111,31 +111,60 @@ async def get_theme_health() -> List[Dict]:
     """Get theme health status for all themes"""
     try:
         data = load_latest_consolidated()
-        themes = data.get('themes', {})
+
+        # Support both dict format (themes) and array format (categories)
+        themes_data = data.get('themes', {})
+        categories_data = data.get('categories', [])
 
         health = []
-        for theme, info in themes.items():
-            fiedler = safe_float(info.get('fiedler', 0))
 
-            # Determine cohesion level based on Fiedler value
-            if fiedler >= 3.0:
-                level = "Very Strong"
-            elif fiedler >= 1.5:
-                level = "Strong"
-            elif fiedler >= 0.5:
-                level = "Moderate"
-            else:
-                level = "Weak"
+        # Handle dict format
+        if themes_data:
+            for theme, info in themes_data.items():
+                fiedler = safe_float(info.get('fiedler', 0))
 
-            health.append({
-                'theme': theme,
-                'tier': info['tier'],
-                'fiedler': fiedler,
-                'level': level,
-                'momentum': safe_float(info.get('momentum', 0)),
-                'bull_ratio': safe_float(info.get('bull_ratio', 0)),
-                'gics_sector': info.get('gics_sector', 'Other'),
-            })
+                if fiedler >= 3.0:
+                    level = "Very Strong"
+                elif fiedler >= 1.5:
+                    level = "Strong"
+                elif fiedler >= 0.5:
+                    level = "Moderate"
+                else:
+                    level = "Weak"
+
+                health.append({
+                    'theme': theme,
+                    'tier': info.get('tier', 'Tier 4'),
+                    'fiedler': fiedler,
+                    'level': level,
+                    'momentum': safe_float(info.get('momentum', 0)),
+                    'bull_ratio': safe_float(info.get('bull_ratio', 0)),
+                    'gics_sector': info.get('gics_sector', info.get('sector', 'Other')),
+                })
+
+        # Handle array format (crypto categories)
+        elif categories_data:
+            for info in categories_data:
+                fiedler = safe_float(info.get('fiedler', 0))
+
+                if fiedler >= 3.0:
+                    level = "Very Strong"
+                elif fiedler >= 1.5:
+                    level = "Strong"
+                elif fiedler >= 0.5:
+                    level = "Moderate"
+                else:
+                    level = "Weak"
+
+                health.append({
+                    'theme': info.get('theme', ''),
+                    'tier': info.get('tier', 'Tier 4'),
+                    'fiedler': fiedler,
+                    'level': level,
+                    'momentum': safe_float(info.get('momentum', 0)),
+                    'bull_ratio': safe_float(info.get('bull_ratio', 0)),
+                    'gics_sector': info.get('sector', 'Other'),
+                })
 
         # Sort by tier then by fiedler
         tier_order = {'Tier 1': 0, 'Tier 2': 1, 'Tier 3': 2, 'Tier 4': 3}
