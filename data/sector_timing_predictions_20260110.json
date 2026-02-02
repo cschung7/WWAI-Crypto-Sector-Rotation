@@ -1,0 +1,36 @@
+{
+  "analysis_date": "20260110",
+  "method": "multi_month_fiedler_velocity",
+  "market": "Crypto",
+  "data_frequency": "monthly",
+  "thresholds": {
+    "tier1": 6.0,
+    "tier2": 3.0,
+    "tier3": 1.0
+  },
+  "predictions": [
+    {
+      "sector": "cApps",
+      "current_fiedler": 0.5624,
+      "past_fiedler": 0.3452,
+      "change": 0.2172,
+      "pct_change": 62.9,
+      "predictions": {
+        "TIER2": {
+          "status": "DECLINING",
+          "estimated_months": Infinity,
+          "confidence": "LOW",
+          "warning": "Sector is declining, not growing toward target",
+          "target": "TIER2"
+        },
+        "TIER1": {
+          "status": "DECLINING",
+          "estimated_months": Infinity,
+          "confidence": "LOW",
+          "warning": "Sector is declining, not growing toward target",
+          "target": "TIER1"
+        }
+      }
+    }
+  ]
+}

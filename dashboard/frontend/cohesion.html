@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Theme Cohesion - USA Sector Rotation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        .header {
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            padding: 1.5rem 2rem;
+        }
+        .header h1 { font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .header p { color: #94a3b8; }
+        .nav-links { display: flex; gap: 1rem; margin-top: 1rem; }
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active { background: #334155; color: #f8fafc; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .summary-card.green { border-left: 4px solid #10b981; }
+        .summary-card.blue { border-left: 4px solid #3b82f6; }
+        .summary-card.yellow { border-left: 4px solid #f59e0b; }
+        .summary-card.red { border-left: 4px solid #ef4444; }
+        .summary-label { color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .summary-value { font-size: 2rem; font-weight: bold; }
+        .summary-value.green { color: #10b981; }
+        .summary-value.blue { color: #3b82f6; }
+        .summary-value.yellow { color: #f59e0b; }
+        .summary-value.red { color: #ef4444; }
+        .section {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .section h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+        .chart-container { height: 500px; position: relative; }
+        .legend {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #94a3b8; }
+        .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+        .legend-color.very-strong { background: #10b981; }
+        .legend-color.strong { background: #3b82f6; }
+        .legend-color.moderate { background: #f59e0b; }
+        .legend-color.weak { background: #ef4444; }
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .theme-card {
+            background: #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border-left: 4px solid #3b82f6;
+            transition: transform 0.2s;
+        }
+        .theme-card:hover { transform: translateX(4px); }
+        .theme-card.very-strong { border-left-color: #10b981; }
+        .theme-card.strong { border-left-color: #3b82f6; }
+        .theme-card.moderate { border-left-color: #f59e0b; }
+        .theme-card.weak { border-left-color: #ef4444; }
+        .theme-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+        .theme-name { font-weight: 600; font-size: 0.95rem; }
+        .theme-tier {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .theme-tier.tier1 { background: #10b981; color: white; }
+        .theme-tier.tier2 { background: #3b82f6; color: white; }
+        .theme-tier.tier3 { background: #f59e0b; color: black; }
+        .theme-tier.tier4 { background: #64748b; color: white; }
+        .theme-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 1rem; font-weight: 600; color: #f8fafc; }
+        .stat-value.very-strong { color: #10b981; }
+        .stat-value.strong { color: #3b82f6; }
+        .stat-value.moderate { color: #f59e0b; }
+        .stat-value.weak { color: #ef4444; }
+        .stat-label { font-size: 0.65rem; text-transform: uppercase; }
+        .guide {
+            background: #334155;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+        .guide h3 { font-size: 1rem; margin-bottom: 1rem; color: #f8fafc; }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .guide-item { display: flex; align-items: flex-start; gap: 0.75rem; }
+        .guide-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .guide-badge.very-strong { background: #10b981; color: white; }
+        .guide-badge.strong { background: #3b82f6; color: white; }
+        .guide-badge.moderate { background: #f59e0b; color: black; }
+        .guide-badge.weak { background: #ef4444; color: white; }
+        .guide-text { font-size: 0.875rem; color: #cbd5e1; }
+        .guide-text strong { color: #f8fafc; }
+        .loading { text-align: center; padding: 2rem; color: #94a3b8; }
+        .market-flag { font-size: 2rem; margin-right: 0.5rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab {
+            padding: 0.5rem 1rem;
+            background: #334155;
+            border: none;
+            border-radius: 0.5rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .tab.active { background: #3b82f6; color: white; }
+        .tab:hover:not(.active) { background: #475569; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container" style="padding: 0;">
+            <h1><span class="market-flag">🇺🇸</span>Theme Cohesion Analysis</h1>
+            <p>Co-movement Gravity - How synchronized are stocks within each theme?</p>
+            <nav class="nav-links">
+                <a href="index.html">Overview</a>
+                <a href="breakout.html">Breakout</a>
+                <a href="signals.html">Signals</a>
+                <a href="cohesion.html" class="active">Cohesion</a>
+                <a href="network.html">Network</a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Summary Cards -->
+        <div class="summary-grid" id="summaryGrid">
+            <div class="loading">Loading cohesion data...</div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color very-strong"></div>
+                <span>Very Strong (&gt; 3.0)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color strong"></div>
+                <span>Strong (1.5 - 3.0)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color moderate"></div>
+                <span>Moderate (0.5 - 1.5)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color weak"></div>
+                <span>Weak (&lt; 0.5)</span>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="section">
+            <h2>Gravity by Theme</h2>
+            <div class="chart-container">
+                <canvas id="cohesionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Theme Cards -->
+        <div class="section">
+            <h2>Theme Details</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="filterCards('all')">All Themes</button>
+                <button class="tab" onclick="filterCards('very_strong')">Very Strong</button>
+                <button class="tab" onclick="filterCards('strong')">Strong</button>
+                <button class="tab" onclick="filterCards('tier1')">TIER 1 Only</button>
+            </div>
+            <div class="theme-grid" id="themeGrid">
+                <div class="loading">Loading themes...</div>
+            </div>
+        </div>
+
+        <!-- Interpretation Guide -->
+        <div class="section">
+            <div class="guide">
+                <h3>Interpretation Guide</h3>
+                <div class="guide-grid">
+                    <div class="guide-item">
+                        <span class="guide-badge very-strong">&gt; 3.0</span>
+                        <div class="guide-text">
+                            <strong>Very Strong Cohesion</strong><br>
+                            Stocks move together. Best for sector rotation strategies.
+                        </div>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-badge strong">1.5 - 3.0</span>
+                        <div class="guide-text">
+                            <strong>Strong Cohesion</strong><br>
+                            Good theme correlation. Sector plays effective.
+                        </div>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-badge moderate">0.5 - 1.5</span>
+                        <div class="guide-text">
+                            <strong>Moderate Cohesion</strong><br>
+                            Some fragmentation. Stock selection matters more.
+                        </div>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-badge weak">&lt; 0.5</span>
+                        <div class="guide-text">
+                            <strong>Weak Cohesion</strong><br>
+                            Fragmented theme. Higher idiosyncratic risk.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let cohesionChart = null;
+        let allThemes = [];
+        let currentFilter = 'all';
+
+        async function init() {
+            await loadThemes();
+        }
+
+        async function loadThemes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/overview/theme-health`);
+                const themes = await response.json();
+
+                allThemes = themes;
+                updateSummary(themes);
+                renderChart(themes);
+                renderThemeCards(themes);
+            } catch (error) {
+                console.error('Error loading themes:', error);
+                document.getElementById('summaryGrid').innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+            }
+        }
+
+        function getCohesionLevel(fiedler) {
+            if (fiedler > 3.0) return 'very_strong';
+            if (fiedler >= 1.5) return 'strong';
+            if (fiedler >= 0.5) return 'moderate';
+            return 'weak';
+        }
+
+        function getCohesionColor(level) {
+            switch(level) {
+                case 'very_strong': return '#10b981';
+                case 'strong': return '#3b82f6';
+                case 'moderate': return '#f59e0b';
+                default: return '#ef4444';
+            }
+        }
+
+        function updateSummary(themes) {
+            let veryStrong = 0, strong = 0, moderate = 0, weak = 0;
+
+            themes.forEach(t => {
+                const level = getCohesionLevel(t.fiedler);
+                if (level === 'very_strong') veryStrong++;
+                else if (level === 'strong') strong++;
+                else if (level === 'moderate') moderate++;
+                else weak++;
+            });
+
+            document.getElementById('summaryGrid').innerHTML = `
+                <div class="summary-card green">
+                    <div class="summary-label">Very Strong</div>
+                    <div class="summary-value green">${veryStrong}</div>
+                </div>
+                <div class="summary-card blue">
+                    <div class="summary-label">Strong</div>
+                    <div class="summary-value blue">${strong}</div>
+                </div>
+                <div class="summary-card yellow">
+                    <div class="summary-label">Moderate</div>
+                    <div class="summary-value yellow">${moderate}</div>
+                </div>
+                <div class="summary-card red">
+                    <div class="summary-label">Weak</div>
+                    <div class="summary-value red">${weak}</div>
+                </div>
+            `;
+        }
+
+        function renderChart(themes) {
+            const sorted = [...themes].sort((a, b) => b.fiedler - a.fiedler).slice(0, 25);
+
+            const ctx = document.getElementById('cohesionChart').getContext('2d');
+
+            if (cohesionChart) cohesionChart.destroy();
+
+            cohesionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(t => t.theme),
+                    datasets: [{
+                        label: 'Gravity',
+                        data: sorted.map(t => t.fiedler),
+                        backgroundColor: sorted.map(t => getCohesionColor(getCohesionLevel(t.fiedler))),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const t = sorted[context.dataIndex];
+                                    return `Tier: ${t.tier} | Momentum: ${(t.momentum * 100).toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        y: { ticks: { color: '#f8fafc', font: { size: 11 } }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function filterCards(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderThemeCards(allThemes);
+        }
+
+        function renderThemeCards(themes) {
+            let filtered = [...themes];
+
+            switch(currentFilter) {
+                case 'very_strong':
+                    filtered = themes.filter(t => getCohesionLevel(t.fiedler) === 'very_strong');
+                    break;
+                case 'strong':
+                    filtered = themes.filter(t => getCohesionLevel(t.fiedler) === 'strong');
+                    break;
+                case 'tier1':
+                    filtered = themes.filter(t => t.tier === 'Tier 1');
+                    break;
+            }
+
+            filtered.sort((a, b) => b.fiedler - a.fiedler);
+
+            const grid = document.getElementById('themeGrid');
+            grid.innerHTML = filtered.slice(0, 30).map(t => {
+                const level = getCohesionLevel(t.fiedler);
+                const tierClass = t.tier.toLowerCase().replace(' ', '');
+
+                return `
+                    <div class="theme-card ${level}">
+                        <div class="theme-header">
+                            <div class="theme-name">${t.theme}</div>
+                            <span class="theme-tier ${tierClass}">${t.tier}</span>
+                        </div>
+                        <div class="theme-stats">
+                            <div class="stat-item">
+                                <div class="stat-value ${level}">${t.fiedler.toFixed(2)}</div>
+                                <div class="stat-label">Cohesion</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" style="color: ${t.momentum > 0 ? '#10b981' : '#ef4444'}">${(t.momentum * 100).toFixed(1)}%</div>
+                                <div class="stat-label">Momentum</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${(t.bull_ratio * 100).toFixed(0)}%</div>
+                                <div class="stat-label">Bull Ratio</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p style="color: #64748b;">No themes match the filter</p>';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

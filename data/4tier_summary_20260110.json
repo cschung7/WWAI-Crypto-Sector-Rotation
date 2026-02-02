@@ -1,0 +1,45 @@
+{
+  "date": "20260110",
+  "generated": "2026-01-12 16:29:47",
+  "market": "Crypto",
+  "data_frequency": "monthly",
+  "sectors": 6,
+  "data_months": 57,
+  "thresholds": {
+    "tier1_min": 6.0,
+    "tier2_min": 3.0,
+    "tier2_max": 6.0,
+    "tier3_min": 1.0,
+    "tier3_max": 3.0,
+    "tier4_min": 0.3,
+    "tier4_max": 1.0
+  },
+  "timing": {
+    "tier1": "Current",
+    "tier2": "1-2 months",
+    "tier3": "2-4 months",
+    "tier4": "4-6 months"
+  },
+  "tier1": {
+    "count": 0,
+    "sectors": [],
+    "criteria": "Fiedler >=6, Change >1"
+  },
+  "tier2": {
+    "count": 0,
+    "sectors": [],
+    "criteria": "Fiedler 3-6, Change >0.5"
+  },
+  "tier3": {
+    "count": 0,
+    "sectors": [],
+    "criteria": "Fiedler 1-3, Change >0.2, %Chg >10%"
+  },
+  "tier4": {
+    "count": 1,
+    "sectors": [
+      "cApps"
+    ],
+    "criteria": "Fiedler 0.3-1, Change >0.1, %Chg >15%"
+  }
+}

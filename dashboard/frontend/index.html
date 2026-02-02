@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>USA Sector Rotation Dashboard</title>
+    <!-- Version: 2026.02.01.v1 - Cloned from KRX Dashboard -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            padding: 1.5rem 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #94a3b8;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Today's Summary Banner */
+        .today-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 1rem;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #475569;
+        }
+
+        .today-info h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .today-date {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .today-status {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.75rem;
+            font-weight: bold;
+        }
+
+        .status-value.green { color: #10b981; }
+        .status-value.yellow { color: #f59e0b; }
+        .status-value.red { color: #ef4444; }
+        .status-value.blue { color: #3b82f6; }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid #334155;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-link {
+            font-size: 0.75rem;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .card-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Signal Quality Card */
+        .signal-summary {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .signal-stat {
+            flex: 1;
+        }
+
+        .signal-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .signal-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .pass-rate-bar {
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .pass-rate-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Top Breakout List */
+        .breakout-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .breakout-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: #334155;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .breakout-item:hover {
+            background: #475569;
+        }
+
+        .breakout-name {
+            font-weight: 500;
+        }
+
+        .breakout-ticker {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        .breakout-score {
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .breakout-score.high { background: #10b981; color: white; }
+        .breakout-score.medium { background: #f59e0b; color: black; }
+
+        /* Theme Health */
+        .theme-health-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .health-item {
+            background: #334155;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .health-count {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .health-label {
+            font-size: 0.6875rem;
+            color: #94a3b8;
+            margin-top: 0.125rem;
+        }
+
+        /* Quick Navigation */
+        .quick-nav {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+        }
+
+        .quick-nav-item {
+            background: #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            text-decoration: none;
+            color: #f8fafc;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .quick-nav-item:hover {
+            background: #475569;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        .quick-nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-nav-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .quick-nav-desc {
+            font-size: 0.6875rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        /* Tier 1 Themes */
+        .tier1-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tier1-tag {
+            background: #10b981;
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tier1-tag:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+
+        .tier2-tag {
+            background: #3b82f6;
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tier2-tag:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+
+        /* Model Confidence */
+        .model-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .model-metric {
+            text-align: center;
+        }
+
+        .model-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        .model-label {
+            font-size: 0.6875rem;
+            color: #94a3b8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        /* Two column layout for bottom */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+            .quick-nav {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Header with flag */
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .header-content {
+            flex: 1;
+        }
+
+        .market-flag {
+            font-size: 2rem;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container" style="padding: 0;">
+            <div class="header-top">
+                <div class="header-content">
+                    <h1><span class="market-flag">🇺🇸</span>USA Sector Rotation Dashboard</h1>
+                    <p>Three-Layer Framework: Cohesion + Regime + Trend</p>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html" class="active">Overview</a>
+                <a href="breakout.html">Breakout</a>
+                <a href="signals.html">Signals</a>
+                <a href="cohesion.html">Cohesion</a>
+                <a href="network.html">Network</a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Today's Summary Banner -->
+        <div class="today-banner">
+            <div class="today-info">
+                <h2>Today's Market Snapshot</h2>
+                <div class="today-date" id="todayDate">Loading...</div>
+            </div>
+            <div class="today-status" id="todayStatus">
+                <div class="status-item">
+                    <div class="status-value blue" id="totalThemes">--</div>
+                    <div class="status-label">Themes Analyzed</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value green" id="passedSignals">--</div>
+                    <div class="status-label">Quality Signals</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value yellow" id="breakoutCount">--</div>
+                    <div class="status-label">Breakout Candidates</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value green" id="tier1Count">--</div>
+                    <div class="status-label">TIER 1 Themes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Signal Quality -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">📊 Signal Quality</span>
+                    <a href="signals.html" class="card-link">View Details &rarr;</a>
+                </div>
+                <div class="signal-summary" id="signalSummary">
+                    <div class="signal-stat">
+                        <div class="signal-number green" id="tier12Count">--</div>
+                        <div class="signal-label">TIER 1-2</div>
+                    </div>
+                    <div class="signal-stat">
+                        <div class="signal-number yellow" id="tier34Count">--</div>
+                        <div class="signal-label">TIER 3-4</div>
+                    </div>
+                    <div class="signal-stat">
+                        <div class="signal-number blue" id="qualityScore">--%</div>
+                        <div class="signal-label">QUALITY SCORE</div>
+                    </div>
+                </div>
+                <div class="pass-rate-bar">
+                    <div class="pass-rate-fill" id="qualityBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Top Breakout Candidates -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🎯 Top Picks</span>
+                    <a href="breakout.html" class="card-link">View All &rarr;</a>
+                </div>
+                <div class="breakout-list" id="breakoutList">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Theme Co-movement Health -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🔗 Theme Cohesion</span>
+                    <a href="cohesion.html" class="card-link">View Details &rarr;</a>
+                </div>
+                <div class="theme-health-grid" id="themeHealth">
+                    <div class="health-item">
+                        <div class="health-count green" id="veryStrongCount">--</div>
+                        <div class="health-label">Very Strong (&gt;3.0)</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-count blue" id="strongCount">--</div>
+                        <div class="health-label">Strong (1.5-3)</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-count yellow" id="moderateCount">--</div>
+                        <div class="health-label">Moderate (0.5-1.5)</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-count red" id="weakCount">--</div>
+                        <div class="health-label">Weak (&lt;0.5)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section -->
+        <div class="bottom-grid">
+            <!-- Focus Themes -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🏆 Focus Themes (TIER 1 & TIER 2)</span>
+                    <a href="network.html" class="card-link">Explore Network &rarr;</a>
+                </div>
+                <div id="focusThemes">
+                    <div class="loading">Loading themes...</div>
+                </div>
+            </div>
+
+            <!-- Framework Info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">📈 Framework Metrics</span>
+                    <a href="signals.html" class="card-link">Details &rarr;</a>
+                </div>
+                <div class="model-info">
+                    <div class="model-metric">
+                        <div class="model-value" id="avgMomentum">--</div>
+                        <div class="model-label">Avg Momentum</div>
+                    </div>
+                    <div class="model-metric">
+                        <div class="model-value" id="avgFiedler">--</div>
+                        <div class="model-label">Avg Cohesion</div>
+                    </div>
+                    <div class="model-metric">
+                        <div class="model-value" id="bullRatio">--</div>
+                        <div class="model-label">Bull Ratio</div>
+                    </div>
+                </div>
+                <p style="font-size: 0.75rem; color: #64748b; margin-top: 1rem; text-align: center;">
+                    Combined Score = Momentum × Cohesion × Bull Ratio
+                </p>
+            </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+                <span class="card-title">⚡ Quick Actions</span>
+            </div>
+            <div class="quick-nav">
+                <a href="breakout.html" class="quick-nav-item">
+                    <div class="quick-nav-icon">📈</div>
+                    <div class="quick-nav-label">Breakout Scanner</div>
+                    <div class="quick-nav-desc">Find momentum opportunities</div>
+                </a>
+                <a href="signals.html" class="quick-nav-item">
+                    <div class="quick-nav-icon">🎯</div>
+                    <div class="quick-nav-label">Signal Quality</div>
+                    <div class="quick-nav-desc">TIER classification results</div>
+                </a>
+                <a href="cohesion.html" class="quick-nav-item">
+                    <div class="quick-nav-icon">🔗</div>
+                    <div class="quick-nav-label">Cohesion</div>
+                    <div class="quick-nav-desc">Theme co-movement analysis</div>
+                </a>
+                <a href="network.html" class="quick-nav-item">
+                    <div class="quick-nav-icon">🕸️</div>
+                    <div class="quick-nav-label">Theme Network</div>
+                    <div class="quick-nav-desc">Stock-theme relationships</div>
+                </a>
+                <a href="/docs" target="_blank" class="quick-nav-item">
+                    <div class="quick-nav-icon">📚</div>
+                    <div class="quick-nav-label">API Docs</div>
+                    <div class="quick-nav-desc">FastAPI documentation</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        function updateDate() {
+            const today = new Date();
+            document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+            });
+        }
+
+        async function loadDashboard() {
+            updateDate();
+            await Promise.all([
+                loadSignalQuality(),
+                loadTopPicks(),
+                loadThemeHealth(),
+                loadFocusThemes()
+            ]);
+        }
+
+        async function loadSignalQuality() {
+            try {
+                const response = await fetch(`${API_BASE}/api/signals/quality`);
+                const data = await response.json();
+
+                const tier12 = (data.tier_distribution?.['Tier 1'] || 0) + (data.tier_distribution?.['Tier 2'] || 0);
+                const tier34 = (data.tier_distribution?.['Tier 3'] || 0) + (data.tier_distribution?.['Tier 4'] || 0);
+                const total = data.total_signals || 1;
+                const qualityScore = data.quality_score || 0;
+
+                document.getElementById('tier12Count').textContent = tier12;
+                document.getElementById('tier34Count').textContent = tier34;
+                document.getElementById('qualityScore').textContent = `${qualityScore.toFixed(1)}%`;
+                document.getElementById('qualityBar').style.width = `${qualityScore}%`;
+
+                // Update banner
+                document.getElementById('passedSignals').textContent = tier12;
+                document.getElementById('totalThemes').textContent = data.unique_tickers || '--';
+            } catch (error) {
+                console.error('Error loading signal quality:', error);
+            }
+        }
+
+        async function loadTopPicks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/overview/top-picks?limit=5`);
+                const picks = await response.json();
+
+                const list = document.getElementById('breakoutList');
+
+                if (picks && picks.length > 0) {
+                    list.innerHTML = picks.map(item => `
+                        <div class="breakout-item">
+                            <div>
+                                <span class="breakout-name">${item.ticker}</span>
+                                <span class="breakout-ticker">${item.theme || ''}</span>
+                            </div>
+                            <span class="breakout-score ${item.score >= 0.15 ? 'high' : 'medium'}">${(item.score * 100).toFixed(1)}%</span>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('breakoutCount').textContent = picks.length;
+                } else {
+                    list.innerHTML = '<p style="color: #64748b; font-size: 0.875rem;">No breakout candidates today</p>';
+                    document.getElementById('breakoutCount').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Error loading top picks:', error);
+                document.getElementById('breakoutList').innerHTML = '<p style="color: #64748b;">Unable to load</p>';
+            }
+        }
+
+        async function loadThemeHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/overview/theme-health`);
+                const themes = await response.json();
+
+                let veryStrong = 0, strong = 0, moderate = 0, weak = 0;
+
+                themes.forEach(t => {
+                    const f = t.fiedler || 0;
+                    if (f > 3.0) veryStrong++;
+                    else if (f >= 1.5) strong++;
+                    else if (f >= 0.5) moderate++;
+                    else weak++;
+                });
+
+                document.getElementById('veryStrongCount').textContent = veryStrong;
+                document.getElementById('strongCount').textContent = strong;
+                document.getElementById('moderateCount').textContent = moderate;
+                document.getElementById('weakCount').textContent = weak;
+
+                // Calculate averages for framework metrics
+                if (themes.length > 0) {
+                    const avgMomentum = themes.reduce((s, t) => s + (t.momentum || 0), 0) / themes.length;
+                    const avgFiedler = themes.reduce((s, t) => s + (t.fiedler || 0), 0) / themes.length;
+                    const avgBullRatio = themes.reduce((s, t) => s + (t.bull_ratio || 0), 0) / themes.length;
+
+                    document.getElementById('avgMomentum').textContent = `${(avgMomentum * 100).toFixed(1)}%`;
+                    document.getElementById('avgFiedler').textContent = avgFiedler.toFixed(2);
+                    document.getElementById('bullRatio').textContent = `${(avgBullRatio * 100).toFixed(0)}%`;
+                }
+            } catch (error) {
+                console.error('Error loading theme health:', error);
+            }
+        }
+
+        async function loadFocusThemes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/signals/tier-breakdown`);
+                const data = await response.json();
+
+                const tier1 = data['Tier 1']?.themes || [];
+                const tier2 = data['Tier 2']?.themes || [];
+                const container = document.getElementById('focusThemes');
+
+                let html = '<div class="tier1-grid">';
+
+                if (tier1.length > 0) {
+                    tier1.forEach(t => {
+                        html += `<span class="tier1-tag" onclick="window.location.href='network.html?theme=${encodeURIComponent(t)}'">${t}</span>`;
+                    });
+                }
+
+                if (tier2.length > 0) {
+                    tier2.forEach(t => {
+                        html += `<span class="tier2-tag" onclick="window.location.href='network.html?theme=${encodeURIComponent(t)}'">${t}</span>`;
+                    });
+                }
+
+                html += '</div>';
+
+                if (tier1.length === 0 && tier2.length === 0) {
+                    html = '<p style="color: #64748b;">No focus themes identified</p>';
+                }
+
+                container.innerHTML = html;
+
+                // Update banner
+                document.getElementById('tier1Count').textContent = tier1.length;
+            } catch (error) {
+                console.error('Error loading focus themes:', error);
+                document.getElementById('focusThemes').innerHTML = '<p style="color: #64748b;">Unable to load</p>';
+            }
+        }
+
+        // Initialize
+        loadDashboard();
+    </script>
+</body>
+</html>

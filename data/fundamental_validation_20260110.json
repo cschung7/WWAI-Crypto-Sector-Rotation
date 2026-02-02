@@ -1,0 +1,19 @@
+{
+  "date": "20260110",
+  "market": "Crypto",
+  "data_frequency": "monthly",
+  "sectors": [
+    {
+      "sector": "cApps",
+      "tier": "TIER4",
+      "quant_score": 55,
+      "fundamental_score": 50,
+      "composite_score": 53.0,
+      "divergence_type": null,
+      "action": "AVOID - Insufficient conviction for crypto risk",
+      "category": "Centralized Applications",
+      "btc_correlation": "HIGH",
+      "volatility": "HIGH"
+    }
+  ]
+}
