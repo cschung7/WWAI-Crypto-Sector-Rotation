@@ -15,7 +15,7 @@ router = APIRouter()
 # Data directory
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-SECTOR_LEADERS_RESULTS = Path("/mnt/nas/WWAI/Sector-Rotation/Sector-Leaders-Usa/results")
+SECTOR_LEADERS_RESULTS = Path("/mnt/nas/WWAI/Sector-Rotation/Sector-Leaders-Crypto/results")
 
 
 def safe_float(value) -> float:
@@ -62,18 +62,25 @@ async def get_summary() -> Dict[str, Any]:
         else:
             sentiment = "Neutral"
 
+        # Support both 'statistics' and 'summary' keys
+        stats = data.get('statistics', data.get('summary', {}))
+        metadata = data.get('metadata', {})
+        total_categories = metadata.get('total_categories', stats.get('total_themes', 0))
+
         return {
-            "date": data.get("generated_at", datetime.now().isoformat()),
+            "date": metadata.get("generated", datetime.now().isoformat()),
             "regime": sentiment,
             "sentiment": sentiment,
-            "total_themes": data['summary']['total_themes'],
-            "tier1_count": data['summary']['tier1_count'],
-            "tier2_count": data['summary']['tier2_count'],
-            "tier3_count": data['summary']['tier3_count'],
-            "tier4_count": data['summary']['tier4_count'],
-            "avg_momentum": safe_float(avg_momentum),
+            "total_themes": total_categories,
+            "total_tickers": metadata.get('total_tickers', 0),
+            "tier1_count": stats.get('tier1_count', 0),
+            "tier2_count": stats.get('tier2_count', 0),
+            "tier3_count": stats.get('tier3_count', 0),
+            "tier4_count": stats.get('tier4_count', 0),
+            "avg_momentum": safe_float(stats.get('avg_momentum', avg_momentum)),
             "avg_bull_ratio": safe_float(avg_bull_ratio),
-            "signal_quality": min(100, int((data['summary']['tier1_count'] + data['summary']['tier2_count']) / max(1, data['summary']['total_themes']) * 100)),
+            "avg_fiedler": safe_float(stats.get('avg_fiedler', 0)),
+            "signal_quality": min(100, int((stats.get('tier1_count', 0) + stats.get('tier2_count', 0)) / max(1, total_categories) * 100)),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -87,12 +94,13 @@ async def get_top_picks(limit: int = 10) -> List[Dict]:
         picks = data.get('top_picks', [])[:limit]
 
         return [{
-            'ticker': p['ticker'],
-            'company': p.get('company', ''),
-            'theme': p['theme'],
-            'tier': p['tier'],
-            'score': safe_float(p['combined_score']),
-            'momentum': safe_float(p['momentum']),
+            'ticker': p.get('ticker_clean', p.get('ticker', '')),
+            'company': p.get('company', p.get('ticker_clean', '')),
+            'theme': p.get('theme', ''),
+            'tier': p.get('tier', 'Tier 1'),
+            'score': safe_float(p.get('combined_score', 0)),
+            'momentum': safe_float(p.get('momentum', 0)),
+            'fiedler': safe_float(p.get('fiedler', 0)),
         } for p in picks]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

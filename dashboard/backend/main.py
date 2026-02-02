@@ -1,6 +1,6 @@
 """
-USA Sector Rotation Dashboard - FastAPI Backend
-Adapted from KRX system for US market
+Crypto Sector Rotation Dashboard - FastAPI Backend
+Adapted from USA system for cryptocurrency market
 """
 
 from fastapi import FastAPI
@@ -22,8 +22,8 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 # Create FastAPI app
 app = FastAPI(
-    title="USA Sector Rotation Dashboard",
-    description="Three-Layer Framework: Cohesion + Regime + Trend",
+    title="Crypto Sector Rotation Dashboard",
+    description="Three-Layer Framework: Cohesion + Regime + Momentum (228 CoinGecko Categories)",
     version="1.0.0"
 )
 
@@ -56,7 +56,7 @@ async def root():
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
-    return {"message": "USA Sector Rotation Dashboard API", "docs": "/docs"}
+    return {"message": "Crypto Sector Rotation Dashboard API", "docs": "/docs"}
 
 
 @app.get("/{page}.html")
@@ -68,12 +68,15 @@ async def serve_page(page: str):
     return {"error": "Page not found"}
 
 
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "usa-sector-rotation",
+        "service": "crypto-sector-rotation",
+        "market": "Cryptocurrency (CoinGecko)",
+        "categories": "228 CoinGecko Categories",
         "data_dir": str(DATA_DIR),
         "data_available": DATA_DIR.exists()
     }
@@ -113,4 +116,4 @@ async def api_status():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8003, reload=True)
