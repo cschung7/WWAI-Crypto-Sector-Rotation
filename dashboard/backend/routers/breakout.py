@@ -466,10 +466,36 @@ async def get_supertrend_candidates(
     """
     try:
         bb_data = load_bb_filtered_tickers()
-        if not bb_data:
-            # Fallback: use top momentum tickers from actionable
+
+        # Check if we have actual tickers in the BB data
+        has_bb_tickers = False
+        tickers = []
+        data_date = date
+
+        if bb_data:
+            if date and date in bb_data:
+                tickers = bb_data[date]
+                data_date = date
+            else:
+                # Find latest date with actual tickers
+                dates = sorted(bb_data.keys(), reverse=True)
+                for d in dates:
+                    if bb_data[d]:  # Has tickers
+                        tickers = bb_data[d]
+                        data_date = d
+                        has_bb_tickers = True
+                        break
+                if not has_bb_tickers and dates:
+                    data_date = dates[0]
+
+        # Fallback: use top momentum tickers if no BB data
+        if not tickers:
             df = load_actionable_tickers()
             df_top = df[df['momentum'] > 0.05].nlargest(limit, 'momentum')
+
+            if df_top.empty:
+                # If no positive momentum, just get top by combined score
+                df_top = df.nlargest(limit, 'combined_score')
 
             candidates = []
             for _, row in df_top.iterrows():
@@ -489,21 +515,10 @@ async def get_supertrend_candidates(
                 "candidates": candidates,
                 "count": len(candidates),
                 "total_available": len(candidates),
-                "date": date or datetime.now().strftime('%Y-%m-%d'),
+                "date": data_date or datetime.now().strftime('%Y-%m-%d'),
                 "parameters": {"bb_period": 220, "bb_multiplier": 2.0},
-                "note": "Using momentum-based selection (BB filter not available)"
+                "note": "Using momentum-based selection (BB crossover data empty)"
             }
-
-        # Get the latest date or specified date
-        if date and date in bb_data:
-            tickers = bb_data[date]
-            data_date = date
-        else:
-            dates = sorted(bb_data.keys(), reverse=True)
-            if not dates:
-                return {"candidates": [], "count": 0, "date": None}
-            data_date = dates[0]
-            tickers = bb_data[data_date]
 
         # Load actionable tickers for enrichment
         try:
