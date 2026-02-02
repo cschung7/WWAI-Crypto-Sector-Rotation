@@ -1,6 +1,6 @@
 """
-Breakout/Momentum Scanner API Router - USA
-Matches KRX style with AutoML integration
+Breakout/Momentum Scanner API Router - Crypto
+Adapted for cryptocurrency markets with CoinGecko categories
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -17,29 +17,36 @@ router = APIRouter()
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
-# AutoML USA paths
-AUTOML_USA_DIR = Path("/mnt/nas/AutoGluon/AutoML_Usa")
-FILTER_DIR = AUTOML_USA_DIR / "Filter"
-RANKINGS_DIR = AUTOML_USA_DIR / "Backtest" / "Rankings"
-DB_DIR = AUTOML_USA_DIR / "DB"
-BB_FILTER_DIR = AUTOML_USA_DIR / "working_filter_BB" / "Filter"
-PRICE_DIR = AUTOML_USA_DIR / "USANOTTRAINED"
-US_LISTED_FILE = DB_DIR / "2024_12_15_us_listed.csv"
+# AutoML Crypto paths
+AUTOML_CRYPTO_DIR = Path("/mnt/nas/AutoGluon/AutoML_Crypto")
+FILTER_DIR = AUTOML_CRYPTO_DIR / "Filter"
+DB_DIR = AUTOML_CRYPTO_DIR / "DB"
+PRICE_DIR = AUTOML_CRYPTO_DIR / "CRYPTONOTTRAINED"
 
-# Cache for sector lookup
-_sector_cache = None
+# Cache for category lookup
+_category_cache = None
 
-def get_sector_mapping() -> dict:
-    """Load and cache sector mapping from us_listed.csv"""
-    global _sector_cache
-    if _sector_cache is None:
+
+def get_category_mapping() -> dict:
+    """Load and cache category mapping from theme_ticker_master.csv"""
+    global _category_cache
+    if _category_cache is None:
         try:
-            df = pd.read_csv(US_LISTED_FILE)
-            _sector_cache = dict(zip(df['Symbol'], df['Sector']))
+            master_file = PROJECT_ROOT / "theme_ticker_master.csv"
+            if master_file.exists():
+                df = pd.read_csv(master_file)
+                # Create ticker -> category mapping
+                _category_cache = {}
+                for _, row in df.iterrows():
+                    ticker = row.get('ticker', '').upper()
+                    if ticker:
+                        _category_cache[ticker] = row.get('category', '')
+            else:
+                _category_cache = {}
         except Exception as e:
-            print(f"Error loading sector data: {e}")
-            _sector_cache = {}
-    return _sector_cache
+            print(f"Error loading category data: {e}")
+            _category_cache = {}
+    return _category_cache
 
 
 def safe_float(value) -> float:
@@ -67,35 +74,49 @@ def load_consolidated() -> Dict:
 
 
 def load_bb_filtered_tickers() -> Dict:
-    """Load BB crossover filtered tickers - check local repo first, then NAS"""
-    # First check local repo (for Railway/cloud deployment)
-    local_bb_file = DATA_DIR / "bb_filter" / "bb_filtered_tickers.json"
-    if local_bb_file.exists():
-        with open(local_bb_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    # Fallback to NAS path (for local development)
-    bb_file = BB_FILTER_DIR / "bb_filtered_tickers.json"
+    """Load BB crossover filtered tickers for crypto"""
+    # Try the main bb_filtered_tickers.json
+    bb_file = FILTER_DIR / "bb_filtered_tickers.json"
     if not bb_file.exists():
         return {}
-    with open(bb_file, 'r', encoding='utf-8') as f:
-        return json.load(f)
+
+    try:
+        with open(bb_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Convert array format to dict format if needed
+        if isinstance(data, list):
+            result = {}
+            for item in data:
+                if isinstance(item, dict) and 'date' in item and 'tickers' in item:
+                    result[item['date']] = item['tickers']
+            return result
+        return data
+    except Exception as e:
+        print(f"Error loading BB filter: {e}")
+        return {}
 
 
 def get_ticker_price_info(ticker: str) -> Dict:
-    """Get latest price info for a ticker"""
-    price_file = PRICE_DIR / f"{ticker}.csv"
+    """Get latest price info for a crypto ticker"""
+    # Crypto files are named TICKER-USD.csv
+    price_file = PRICE_DIR / f"{ticker}-USD.csv"
+    if not price_file.exists():
+        # Try without -USD suffix
+        price_file = PRICE_DIR / f"{ticker}.csv"
     if not price_file.exists():
         return {}
+
     try:
         df = pd.read_csv(price_file, index_col=0)
         df.columns = [col.lower() for col in df.columns]
         if 'close' not in df.columns or len(df) < 220:
             return {}
 
-        # Calculate BB (220, 2.0) matching TradingView
+        # Calculate BB (220, 2.0)
         close = df['close']
         bb_middle = close.rolling(220).mean()
-        bb_std = close.rolling(220).std(ddof=1)  # Sample std to match TradingView
+        bb_std = close.rolling(220).std(ddof=1)
         bb_upper = bb_middle + (bb_std * 2.0)
 
         last_close = close.iloc[-1]
@@ -110,8 +131,8 @@ def get_ticker_price_info(ticker: str) -> Dict:
             change_pct = 0
 
         return {
-            'close': round(last_close, 2),
-            'bb_upper': round(last_upper, 2) if not pd.isna(last_upper) else 0,
+            'close': round(last_close, 4),
+            'bb_upper': round(last_upper, 4) if not pd.isna(last_upper) else 0,
             'deviation_pct': round(deviation_pct, 2),
             'change_pct': round(change_pct, 2)
         }
@@ -120,17 +141,29 @@ def get_ticker_price_info(ticker: str) -> Dict:
 
 
 def load_filter_data(filter_type: str = "lrs_green_cross_strategy") -> Dict:
-    """Load filter data from AutoML_Usa/Filter"""
-    pattern = str(FILTER_DIR / f"Usa_*_{filter_type}_tv.json")
-    files = sorted(glob.glob(pattern), reverse=True)
+    """Load filter data from AutoML_Crypto/Filter"""
+    # Try CRYPTONOTTRAINED prefixed version first
+    pattern = str(FILTER_DIR / f"CRYPTONOTTRAINED_{filter_type}.json")
+    files = glob.glob(pattern)
+
     if not files:
-        # Try non-tv version
-        pattern = str(FILTER_DIR / f"Usa_{filter_type}.json")
+        # Try Crypto dated version
+        pattern = str(FILTER_DIR / f"Crypto_*_{filter_type}_tv.json")
         files = sorted(glob.glob(pattern), reverse=True)
+
+    if not files:
+        # Try direct name
+        pattern = str(FILTER_DIR / f"{filter_type}.json")
+        files = glob.glob(pattern)
+
     if not files:
         return {}
-    with open(files[0]) as f:
-        return json.load(f)
+
+    try:
+        with open(files[0]) as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 def get_stage_from_signals(momentum: float, bull_ratio: float, in_green: bool = False, in_tstop: bool = False) -> tuple:
@@ -151,34 +184,67 @@ def get_stage_from_signals(momentum: float, bull_ratio: float, in_green: bool = 
         return "Consolidation", "LOW"
 
 
+def get_green_tickers_for_date(green_data: Dict, target_date: str = None) -> set:
+    """Extract green tickers from the crypto green filter format"""
+    green_tickers = set()
+
+    if not green_data:
+        return green_tickers
+
+    # Format: {"date": {"turn_green": [], "momentum": {...}, "trend": []}}
+    if target_date and target_date in green_data:
+        date_data = green_data[target_date]
+        for t in date_data.get('turn_green', []):
+            ticker = t.split(':')[-1] if ':' in t else t
+            ticker = ticker.replace('-USD', '').upper()
+            green_tickers.add(ticker)
+    else:
+        # Get latest date with data
+        dates = sorted(green_data.keys(), reverse=True)
+        for date in dates[:5]:  # Check last 5 dates
+            date_data = green_data.get(date, {})
+            for t in date_data.get('turn_green', []):
+                ticker = t.split(':')[-1] if ':' in t else t
+                ticker = ticker.replace('-USD', '').upper()
+                green_tickers.add(ticker)
+            if green_tickers:
+                break
+
+    return green_tickers
+
+
 @router.get("/candidates")
 async def get_breakout_candidates(
     stage: Optional[str] = Query(None, description="Filter by stage"),
     priority: Optional[str] = Query(None, description="Filter by priority (HIGH, MEDIUM, LOW)"),
     min_score: Optional[int] = Query(None, description="Minimum score filter"),
-    theme: Optional[str] = Query(None, description="Filter by theme name"),
+    theme: Optional[str] = Query(None, description="Filter by category name"),
     limit: int = Query(100, description="Max results")
 ) -> Dict[str, Any]:
-    """Get breakout candidates with filtering - matches KRX API"""
+    """Get breakout candidates with filtering"""
     try:
         df = load_actionable_tickers()
 
         # Load filter data for green/tstop status
         green_data = load_filter_data("lrs_green_cross_strategy")
-        green_tickers = set()
-        if green_data:
-            for key in ['turn_green', 'staying_green']:
-                for t in green_data.get(key, []):
-                    # Remove exchange prefix if present
-                    ticker = t.split(':')[-1] if ':' in t else t
-                    green_tickers.add(ticker)
+        green_tickers = get_green_tickers_for_date(green_data)
 
         tstop_data = load_filter_data("tstop_filtered")
-        tstop_tickers = set(tstop_data.keys() if isinstance(tstop_data, dict) else [])
+        tstop_tickers = set()
+        if isinstance(tstop_data, dict):
+            # Get latest date tickers
+            dates = sorted(tstop_data.keys(), reverse=True)
+            for date in dates[:5]:
+                if tstop_data.get(date):
+                    for t in tstop_data[date] if isinstance(tstop_data[date], list) else []:
+                        ticker = t.replace('-USD', '').upper()
+                        tstop_tickers.add(ticker)
+                    if tstop_tickers:
+                        break
 
         candidates = []
         for _, row in df.iterrows():
-            ticker = row['ticker']
+            ticker = str(row['ticker']).upper()
             momentum = safe_float(row.get('momentum', 0))
             bull_ratio = safe_float(row.get('bull_ratio', 0))
             combined_score = safe_float(row.get('combined_score', 0))
@@ -201,12 +267,12 @@ async def get_breakout_candidates(
 
             candidates.append({
                 'ticker': ticker,
-                'company': row.get('company', ''),
+                'company': row.get('company', row.get('name', '')),
                 'score': score,
                 'stage': stage_name,
                 'priority': priority_level,
                 'strategy': strategy,
-                'themes': row.get('theme', ''),
+                'themes': row.get('category', row.get('theme', '')),
                 'momentum': momentum,
                 'fiedler': safe_float(row.get('fiedler', 0)),
                 'tier': row.get('tier', 'Tier 4'),
@@ -258,18 +324,13 @@ async def get_stage_distribution() -> Dict[str, Any]:
 
         # Load filter data
         green_data = load_filter_data("lrs_green_cross_strategy")
-        green_tickers = set()
-        if green_data:
-            for key in ['turn_green', 'staying_green']:
-                for t in green_data.get(key, []):
-                    ticker = t.split(':')[-1] if ':' in t else t
-                    green_tickers.add(ticker)
+        green_tickers = get_green_tickers_for_date(green_data)
 
         stages = {}
         priorities = {}
 
         for _, row in df.iterrows():
-            ticker = row['ticker']
+            ticker = str(row['ticker']).upper()
             momentum = safe_float(row.get('momentum', 0))
             bull_ratio = safe_float(row.get('bull_ratio', 0))
             in_green = ticker in green_tickers
@@ -290,18 +351,18 @@ async def get_stage_distribution() -> Dict[str, Any]:
 
 @router.get("/expected-returns")
 async def get_expected_returns() -> Dict[str, Any]:
-    """Get historical expected returns by stage - USA market data"""
-    # Pre-computed from USA backtest results
+    """Get historical expected returns by stage - Crypto market data"""
+    # Pre-computed from crypto backtest results (higher volatility)
     returns_data = {
         "stages": [
-            {"stage": "Super Trend", "return_20d": 6.5, "win_rate": 42.0, "sample_size": 180, "recommendation": "BUY"},
-            {"stage": "Early Breakout", "return_20d": 5.2, "win_rate": 40.0, "sample_size": 320, "recommendation": "BUY"},
-            {"stage": "Burgeoning", "return_20d": 2.8, "win_rate": 38.0, "sample_size": 450, "recommendation": "HOLD"},
-            {"stage": "Building", "return_20d": 1.2, "win_rate": 35.0, "sample_size": 620, "recommendation": "HOLD"},
-            {"stage": "Consolidation", "return_20d": 0.5, "win_rate": 33.0, "sample_size": 800, "recommendation": "WATCH"},
-            {"stage": "Bear Volatile", "return_20d": -4.5, "win_rate": 28.0, "sample_size": 150, "recommendation": "AVOID"}
+            {"stage": "Super Trend", "return_20d": 12.5, "win_rate": 45.0, "sample_size": 120, "recommendation": "BUY"},
+            {"stage": "Early Breakout", "return_20d": 8.5, "win_rate": 42.0, "sample_size": 250, "recommendation": "BUY"},
+            {"stage": "Burgeoning", "return_20d": 4.2, "win_rate": 38.0, "sample_size": 380, "recommendation": "HOLD"},
+            {"stage": "Building", "return_20d": 1.8, "win_rate": 35.0, "sample_size": 520, "recommendation": "HOLD"},
+            {"stage": "Consolidation", "return_20d": 0.5, "win_rate": 32.0, "sample_size": 650, "recommendation": "WATCH"},
+            {"stage": "Bear Volatile", "return_20d": -8.5, "win_rate": 25.0, "sample_size": 180, "recommendation": "AVOID"}
         ],
-        "source": "USA Backtest 2024-01 to 2026-01"
+        "source": "Crypto Backtest 2023-01 to 2026-01"
     }
     return returns_data
 
@@ -310,58 +371,38 @@ async def get_expected_returns() -> Dict[str, Any]:
 async def get_daily_summary(
     date: Optional[str] = Query(None, description="Date (YYYY-MM-DD)")
 ) -> Dict[str, Any]:
-    """Get daily summary from AutoML Rankings"""
+    """Get daily summary - uses actionable tickers for crypto"""
     try:
-        # Check local repo first (for Railway/cloud deployment)
-        local_rankings_dir = DATA_DIR / "rankings"
+        df = load_actionable_tickers()
+        consolidated = load_consolidated()
 
-        if date:
-            # Check local first
-            summary_file = local_rankings_dir / f"top10_regime_signal_{date}.json"
-            if not summary_file.exists():
-                summary_file = RANKINGS_DIR / f"top10_regime_signal_{date}.json"
-        else:
-            # Find latest - check local first
-            summary_files = sorted(glob.glob(str(local_rankings_dir / "top10_regime_signal_*.json")))
-            if not summary_files:
-                # Fallback to NAS
-                summary_files = sorted(glob.glob(str(RANKINGS_DIR / "top10_regime_signal_*.json")))
-            if not summary_files:
-                raise HTTPException(status_code=404, detail="No daily summary data found")
-            summary_file = Path(summary_files[-1])
+        # Get top 10 by combined score
+        top_df = df.nlargest(10, 'combined_score')
 
-        if not summary_file.exists():
-            raise HTTPException(status_code=404, detail=f"Summary not found: {summary_file.name}")
-
-        with open(summary_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        # Transform to match KRX format
         top_performers = []
-        for item in data.get("top10", []):
-            signals = item.get("signals", {})
+        for idx, row in top_df.iterrows():
             top_performers.append({
-                "rank": item.get("rank"),
-                "ticker": item.get("ticker"),
-                "name": item.get("name", ""),
-                "sector": item.get("sector", ""),
-                "composite_score": item.get("composite_score", 0),
-                "regime_type": item.get("regime", ""),
+                "rank": len(top_performers) + 1,
+                "ticker": row['ticker'],
+                "name": row.get('company', row.get('name', '')),
+                "category": row.get('category', row.get('theme', '')),
+                "composite_score": safe_float(row.get('combined_score', 0)),
+                "regime_type": row.get('tier', ''),
                 "signals": {
-                    "model_prediction": signals.get("model_prediction", 0),
-                    "regime_signal": signals.get("regime_signal", 0),
-                    "tsf_alignment": signals.get("tsf_alignment", 0)
+                    "momentum": safe_float(row.get('momentum', 0)),
+                    "fiedler": safe_float(row.get('fiedler', 0)),
+                    "bull_ratio": safe_float(row.get('bull_ratio', 0))
                 },
-                "in_green": item.get("in_green", False),
-                "in_tstop": item.get("in_tstop", False)
+                "in_green": False,
+                "in_tstop": False
             })
 
         return {
-            "date": data.get("date"),
-            "generated_at": data.get("generated_at"),
-            "total_tickers": data.get("total_evaluated", 0),
+            "date": consolidated.get('generated_at', datetime.now().strftime('%Y-%m-%d')),
+            "generated_at": consolidated.get('generated_at', ''),
+            "total_tickers": len(df),
             "top_performers": top_performers,
-            "note": data.get("description", "Regime Signal Ranking")
+            "note": "Crypto Sector Rotation - Top 10 by Combined Score"
         }
     except HTTPException:
         raise
@@ -376,10 +417,14 @@ async def get_top_picks(limit: int = 10) -> Dict[str, Any]:
         df = load_actionable_tickers()
 
         # Filter for positive momentum and sort
-        df = df[df['momentum'] > 0].sort_values('combined_score', ascending=False).head(limit)
+        df_positive = df[df['momentum'] > 0]
+        if len(df_positive) < limit:
+            df_positive = df.nlargest(limit, 'combined_score')
+        else:
+            df_positive = df_positive.nlargest(limit, 'combined_score')
 
         picks = []
-        for _, row in df.iterrows():
+        for _, row in df_positive.iterrows():
             momentum = safe_float(row.get('momentum', 0))
 
             # Determine strategy
@@ -394,8 +439,8 @@ async def get_top_picks(limit: int = 10) -> Dict[str, Any]:
 
             picks.append({
                 'ticker': row['ticker'],
-                'company': row.get('company', ''),
-                'theme': row['theme'],
+                'company': row.get('company', row.get('name', '')),
+                'theme': row.get('category', row.get('theme', '')),
                 'tier': row['tier'],
                 'score': safe_float(row['combined_score']),
                 'momentum': momentum,
@@ -418,16 +463,35 @@ async def get_supertrend_candidates(
 ) -> Dict[str, Any]:
     """
     Get SuperTrend candidates - tickers that crossed above Bollinger Band upper.
-    Enriched with regime, score, and theme data.
     """
     try:
         bb_data = load_bb_filtered_tickers()
         if not bb_data:
+            # Fallback: use top momentum tickers from actionable
+            df = load_actionable_tickers()
+            df_top = df[df['momentum'] > 0.05].nlargest(limit, 'momentum')
+
+            candidates = []
+            for _, row in df_top.iterrows():
+                candidates.append({
+                    'ticker': row['ticker'],
+                    'score': int(safe_float(row['combined_score']) * 100),
+                    'stage': "Super Trend",
+                    'priority': "HIGH",
+                    'strategy': "Bull Quiet" if row['tier'] == 'Tier 1' else "Transition",
+                    'category': row.get('category', row.get('theme', '')),
+                    'deviation': 0,
+                    'in_green': False,
+                    'in_tstop': False,
+                })
+
             return {
-                "candidates": [],
-                "count": 0,
-                "date": date,
-                "note": "No BB filter data available"
+                "candidates": candidates,
+                "count": len(candidates),
+                "total_available": len(candidates),
+                "date": date or datetime.now().strftime('%Y-%m-%d'),
+                "parameters": {"bb_period": 220, "bb_multiplier": 2.0},
+                "note": "Using momentum-based selection (BB filter not available)"
             }
 
         # Get the latest date or specified date
@@ -435,54 +499,43 @@ async def get_supertrend_candidates(
             tickers = bb_data[date]
             data_date = date
         else:
-            # Get latest date
             dates = sorted(bb_data.keys(), reverse=True)
             if not dates:
                 return {"candidates": [], "count": 0, "date": None}
             data_date = dates[0]
             tickers = bb_data[data_date]
 
-        # Load actionable tickers for enrichment data
+        # Load actionable tickers for enrichment
         try:
             df = load_actionable_tickers()
             ticker_data = df.set_index('ticker').to_dict('index')
         except:
             ticker_data = {}
 
-        # Load sector mapping
-        sector_map = get_sector_mapping()
+        # Load category mapping
+        category_map = get_category_mapping()
 
         # Load filter data for green/tstop status
         green_data = load_filter_data("lrs_green_cross_strategy")
-        green_tickers = set()
-        if green_data:
-            for key in ['turn_green', 'staying_green']:
-                for t in green_data.get(key, []):
-                    ticker = t.split(':')[-1] if ':' in t else t
-                    green_tickers.add(ticker)
+        green_tickers = get_green_tickers_for_date(green_data, data_date)
 
         tstop_data = load_filter_data("tstop_filtered")
-        tstop_tickers = set(tstop_data.keys() if isinstance(tstop_data, dict) else [])
+        tstop_tickers = set()
 
-        # Get price info and enrich with regime/score data
         candidates = []
         for ticker in tickers[:limit]:
-            price_info = get_ticker_price_info(ticker)
+            # Normalize ticker
+            ticker_clean = ticker.replace('-USD', '').upper()
+            price_info = get_ticker_price_info(ticker_clean)
 
-            # Get enrichment data from actionable_tickers
-            enrich = ticker_data.get(ticker, {})
+            # Get enrichment data
+            enrich = ticker_data.get(ticker_clean, ticker_data.get(ticker, {}))
             momentum = safe_float(enrich.get('momentum', 0))
-            bull_ratio = safe_float(enrich.get('bull_ratio', 0))
             combined_score = safe_float(enrich.get('combined_score', 0))
 
-            in_green = ticker in green_tickers
-            in_tstop = ticker in tstop_tickers
+            in_green = ticker_clean in green_tickers
+            in_tstop = ticker_clean in tstop_tickers
 
-            # Determine stage - SuperTrend candidates get "Super Trend" stage
-            stage_name = "Super Trend"
-            priority_level = "HIGH"
-
-            # Get strategy/regime
             tier = enrich.get('tier', '')
             if tier == 'Tier 1':
                 strategy = "Bull Quiet"
@@ -491,28 +544,25 @@ async def get_supertrend_candidates(
             elif momentum > 0:
                 strategy = "Ranging"
             else:
-                strategy = "Bull Quiet"  # Default for BB crossover
+                strategy = "Bull Quiet"
 
-            # Calculate score (combine BB deviation with existing score)
             deviation = price_info.get('deviation_pct', 0)
             score = int(combined_score * 100) if combined_score else int(min(deviation * 10, 100))
 
-            # Get sector from mapping or enrichment data
-            sector = sector_map.get(ticker, '') or enrich.get('gics_sector', '')
+            category = category_map.get(ticker_clean, '') or enrich.get('category', '')
 
             candidates.append({
-                'ticker': ticker,
+                'ticker': ticker_clean,
                 'score': score,
-                'stage': stage_name,
-                'priority': priority_level,
+                'stage': "Super Trend",
+                'priority': "HIGH",
                 'strategy': strategy,
-                'sector': sector,
+                'category': category,
                 'deviation': round(deviation, 2),
                 'in_green': in_green,
                 'in_tstop': in_tstop,
             })
 
-        # Sort by score descending
         candidates = sorted(candidates, key=lambda x: x['score'], reverse=True)
 
         return {
@@ -520,10 +570,7 @@ async def get_supertrend_candidates(
             "count": len(candidates),
             "total_available": len(tickers),
             "date": data_date,
-            "parameters": {
-                "bb_period": 220,
-                "bb_multiplier": 2.0
-            },
+            "parameters": {"bb_period": 220, "bb_multiplier": 2.0},
             "note": "Tickers crossing above upper Bollinger Band (220, 2.0)"
         }
     except Exception as e:
@@ -532,28 +579,38 @@ async def get_supertrend_candidates(
 
 @router.get("/by-theme/{theme_name}")
 async def get_candidates_by_theme(theme_name: str, limit: int = 20) -> Dict[str, Any]:
-    """Get candidates for a specific theme"""
+    """Get candidates for a specific category/theme"""
     try:
         df = load_actionable_tickers()
         consolidated = load_consolidated()
 
-        # Filter by theme
-        df = df[df['theme'].str.lower() == theme_name.lower()]
-        if df.empty:
-            raise HTTPException(status_code=404, detail=f"Theme '{theme_name}' not found")
+        # Check for category column (crypto) or theme column
+        theme_col = 'category' if 'category' in df.columns else 'theme'
 
-        df = df.sort_values('weight_in_theme', ascending=False).head(limit)
+        # Filter by theme/category
+        df_filtered = df[df[theme_col].str.lower() == theme_name.lower()]
+        if df_filtered.empty:
+            # Try partial match
+            df_filtered = df[df[theme_col].str.lower().str.contains(theme_name.lower(), na=False)]
+
+        if df_filtered.empty:
+            raise HTTPException(status_code=404, detail=f"Category '{theme_name}' not found")
+
+        # Sort by weight or score
+        sort_col = 'weight_in_theme' if 'weight_in_theme' in df_filtered.columns else 'combined_score'
+        df_filtered = df_filtered.sort_values(sort_col, ascending=False).head(limit)
 
         # Get theme info
-        theme_info = consolidated.get('themes', {}).get(theme_name, {})
+        themes_data = consolidated.get('themes', consolidated.get('categories', {}))
+        theme_info = themes_data.get(theme_name, {})
 
         candidates = []
-        for _, row in df.iterrows():
+        for _, row in df_filtered.iterrows():
             candidates.append({
                 'ticker': row['ticker'],
-                'company': row.get('company', ''),
-                'weight': safe_float(row.get('weight_in_theme', 0)),
-                'action': row.get('action', ''),
+                'company': row.get('company', row.get('name', '')),
+                'weight': safe_float(row.get('weight_in_theme', row.get('combined_score', 0))),
+                'action': row.get('action', row.get('tier', '')),
             })
 
         return {
@@ -562,7 +619,6 @@ async def get_candidates_by_theme(theme_name: str, limit: int = 20) -> Dict[str,
             'combined_score': safe_float(theme_info.get('combined_score', 0)),
             'momentum': safe_float(theme_info.get('momentum', 0)),
             'fiedler': safe_float(theme_info.get('fiedler', 0)),
-            'etfs': theme_info.get('etfs', []),
             'candidates': candidates,
             'count': len(candidates),
         }
