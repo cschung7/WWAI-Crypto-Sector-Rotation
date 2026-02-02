@@ -412,6 +412,10 @@ async def get_stage_distribution() -> Dict[str, Any]:
     try:
         df = load_actionable_tickers()
 
+        # Get SuperTrend count from BB crossovers
+        bb_crossovers = compute_bb_crossovers(limit=100)
+        supertrend_count = len(bb_crossovers)
+
         # Load filter data
         green_data = load_filter_data("lrs_green_cross_strategy")
         green_tickers = get_green_tickers_for_date(green_data)
@@ -429,6 +433,11 @@ async def get_stage_distribution() -> Dict[str, Any]:
 
             stages[stage_name] = stages.get(stage_name, 0) + 1
             priorities[priority_level] = priorities.get(priority_level, 0) + 1
+
+        # Add SuperTrend from BB crossovers
+        stages["Super Trend"] = supertrend_count
+        if supertrend_count > 0:
+            priorities["HIGH"] = priorities.get("HIGH", 0) + supertrend_count
 
         return {
             "stages": [{"name": k, "count": v} for k, v in sorted(stages.items(), key=lambda x: -x[1])],
