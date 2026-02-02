@@ -348,11 +348,12 @@
         let dataTable = null;
 
         async function init() {
-            await loadSummary();
-            await loadDailySummary();
-            await loadSupertrendCandidates();
-            await loadCharts();
-            await loadCandidates();
+            // Run all loads independently to prevent one failure from blocking others
+            try { await loadSummary(); } catch (e) { console.error('loadSummary error:', e); }
+            try { await loadDailySummary(); } catch (e) { console.error('loadDailySummary error:', e); }
+            try { await loadSupertrendCandidates(); } catch (e) { console.error('loadSupertrendCandidates error:', e); }
+            try { await loadCharts(); } catch (e) { console.error('loadCharts error:', e); }
+            try { await loadCandidates(); } catch (e) { console.error('loadCandidates error:', e); }
             setupFilters();
         }
 
@@ -390,7 +391,7 @@
                             <td>${c.stage}</td>
                             <td><span class="badge ${priorityClass}">${c.priority}</span></td>
                             <td>${c.strategy}</td>
-                            <td>${c.sector || '-'}</td>
+                            <td>${c.sector || c.category || '-'}</td>
                             <td style="color: ${devColor}; font-weight: 600;">${devSign}${c.deviation.toFixed(2)}%</td>
                         </tr>
                     `;
