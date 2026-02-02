@@ -45,9 +45,15 @@
         }
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(5, 1fr);
             gap: 1rem;
             margin-bottom: 2rem;
+        }
+        @media (max-width: 1200px) {
+            .summary-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
         }
         .summary-card {
             background: #1e293b;
@@ -257,10 +263,11 @@
             </div>
         </div>
 
-        <!-- SuperTrend Candidates -->
+        <!-- Long Term Trend Breakout (BB 220, 2.0) -->
         <div class="section" id="supertrendSection">
             <h2>
-                🚀 SuperTrend Candidates
+                📈 Long Term Trend Breakout
+                <span style="font-size: 0.75rem; color: #f472b6; margin-left: 0.5rem;">BB(220, 2.0) Crossover</span>
                 <span id="supertrendDate" style="font-size: 0.75rem; color: #94a3b8; margin-left: 1rem;"></span>
                 <span id="supertrendCount" style="font-size: 0.875rem; color: #3b82f6; margin-left: 0.5rem;"></span>
             </h2>
@@ -413,35 +420,64 @@
 
         async function loadSummary() {
             try {
-                const response = await fetch(`${API_BASE}/api/breakout/stages`);
+                const response = await fetch(`${API_BASE}/api/breakout/summary-cards`);
                 const data = await response.json();
-
-                const superTrend = data.stages.find(s => s.name === 'Super Trend')?.count || 0;
-                const earlyBreakout = data.stages.find(s => s.name === 'Early Breakout')?.count || 0;
-                const high = data.priorities.find(p => p.name === 'HIGH')?.count || 0;
 
                 document.getElementById('summaryGrid').innerHTML = `
                     <div class="summary-card positive">
                         <div class="summary-label">Super Trend</div>
-                        <div class="summary-value">${superTrend}</div>
+                        <div class="summary-value" style="color: #10b981;">${data.supertrend || 0}</div>
                     </div>
                     <div class="summary-card positive">
                         <div class="summary-label">Early Breakout</div>
-                        <div class="summary-value">${earlyBreakout}</div>
+                        <div class="summary-value" style="color: #3b82f6;">${data.early_breakout || 0}</div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-label">High Priority</div>
-                        <div class="summary-value">${high}</div>
+                        <div class="summary-value" style="color: #f59e0b;">${data.high_priority || 0}</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-label">Total Candidates</div>
-                        <div class="summary-value">${data.total}</div>
+                        <div class="summary-label">Long Term Trend</div>
+                        <div class="summary-value" style="color: #f472b6;">${data.long_term_trend || 0}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Total Categories</div>
+                        <div class="summary-value" style="color: #a855f7;">${data.total || 0}</div>
                     </div>
                 `;
 
-                document.getElementById('dataFreshness').innerHTML = `Data as of: ${new Date().toLocaleDateString('en-US')}`;
+                document.getElementById('dataFreshness').innerHTML = `Data as of: ${data.date || new Date().toLocaleDateString('en-US')}`;
             } catch (error) {
                 console.error('Error loading summary:', error);
+                // Fallback to stages endpoint
+                try {
+                    const stagesRes = await fetch(`${API_BASE}/api/breakout/stages`);
+                    const stagesData = await stagesRes.json();
+                    const superTrend = stagesData.stages.find(s => s.name === 'Super Trend')?.count || 0;
+                    const earlyBreakout = stagesData.stages.find(s => s.name === 'Early Breakout')?.count || 0;
+                    const high = stagesData.priorities.find(p => p.name === 'HIGH')?.count || 0;
+
+                    document.getElementById('summaryGrid').innerHTML = `
+                        <div class="summary-card positive">
+                            <div class="summary-label">Super Trend</div>
+                            <div class="summary-value">${superTrend}</div>
+                        </div>
+                        <div class="summary-card positive">
+                            <div class="summary-label">Early Breakout</div>
+                            <div class="summary-value">${earlyBreakout}</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">High Priority</div>
+                            <div class="summary-value">${high}</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Total Candidates</div>
+                            <div class="summary-value">${stagesData.total}</div>
+                        </div>
+                    `;
+                } catch (e) {
+                    console.error('Fallback also failed:', e);
+                }
             }
         }
 

@@ -476,6 +476,52 @@ async def get_stage_distribution() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/summary-cards")
+async def get_summary_cards() -> Dict[str, Any]:
+    """Get summary card counts for dashboard"""
+    try:
+        df = load_actionable_tickers()
+        consolidated = load_consolidated()
+
+        # Get SuperTrend/Long Term Trend count from BB crossovers
+        bb_crossovers = compute_bb_crossovers(limit=100)
+        supertrend_count = len(bb_crossovers)
+
+        # Load filter data
+        green_data = load_filter_data("lrs_green_cross_strategy")
+        green_tickers = get_green_tickers_for_date(green_data)
+
+        early_breakout_count = 0
+        high_priority_count = 0
+
+        for _, row in df.iterrows():
+            ticker = str(row['ticker']).upper()
+            momentum = safe_float(row.get('momentum', 0))
+            bull_ratio = safe_float(row.get('bull_ratio', 0))
+            in_green = ticker in green_tickers
+
+            stage_name, priority_level = get_stage_from_signals(momentum, bull_ratio, in_green)
+
+            if stage_name == "Early Breakout":
+                early_breakout_count += 1
+            if priority_level == "HIGH":
+                high_priority_count += 1
+
+        # Get date from consolidated analysis
+        data_date = consolidated.get('generated_at', datetime.now().strftime('%Y-%m-%d'))
+
+        return {
+            "supertrend": supertrend_count,
+            "early_breakout": early_breakout_count,
+            "high_priority": high_priority_count,
+            "long_term_trend": supertrend_count,  # Same as supertrend for crypto (BB crossover)
+            "total": 228,  # Total CoinGecko categories
+            "date": data_date
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/expected-returns")
 async def get_expected_returns() -> Dict[str, Any]:
     """Get historical expected returns by stage - Crypto market data"""
