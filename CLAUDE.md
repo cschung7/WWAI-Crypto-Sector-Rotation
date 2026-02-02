@@ -5,81 +5,67 @@
 Cryptocurrency market sector rotation analysis system using Three-Layer Framework:
 - **Layer 1**: Category Cohesion (Fiedler eigenvalue analysis)
 - **Layer 2**: Market Regime Detection (Bull/Bear/Neutral)
-- **Layer 3**: Momentum Signals (from CoinGecko/regime data)
+- **Layer 3**: Momentum/Trend Signals (from CoinGecko data)
 
-**Key Stats**: 228 CoinGecko categories, 1,559 tokens, 10 meta-sectors
+**Key Stats**: 228 CoinGecko categories, 1,506 tokens, 10 meta-sectors
 
 **Dashboard Port**: 8003 (local)
 
 ---
 
-## Category Classification System
+## Dashboard Pages
 
-### Total: 228 CoinGecko Categories + 4 Level 2 Categories
+### 1. Overview (`index.html`)
+- Market summary with total tickers, categories, average cohesion
+- Top picks by tier classification
+- Quick navigation to all pages
 
-| Meta-Sector | Categories | Example Tokens |
-|-------------|------------|----------------|
-| AI | 7 | FET, RENDER, NEAR, ICP, VIRTUAL |
-| DeFi | 10 | AAVE, UNI, MKR, COMP, CRV, SNX |
-| Infrastructure | 10 | LINK, FIL, AR, GRT, RNDR |
-| Gaming | 5 | GALA, SAND, MANA, AXS, ENJ |
-| Privacy | 3 | XMR, ZEC, DASH, ZEN, MINA |
-| Memes | 9 | DOGE, SHIB, BONK, FLOKI, WIF, PEPE |
-| RWA | 5 | PAXG, XAUT, ONDO |
-| Stablecoins | 5 | USDT, USDC, DAI |
-| Ecosystem | 17+ | SOL, ETH, BNB, AVAX, MATIC |
-| VC Portfolio | 8+ | a16z, Coinbase, Paradigm picks |
+### 2. Breakout Scanner (`breakout.html`)
+- Bollinger Band BB(220, 2.0) crossover signals
+- SuperTrend candidates (filtered by min_date 2026-01-25, min_price $5)
+- Stage classification (Super Trend, Early Breakout, Building, etc.)
+- **Current SuperTrend**: 6 candidates (VNXAU, PAXG, XAUT, CGO, INSURANCE, MGC29839)
 
-### Level 2 Categories (from historical analysis)
+### 3. Signals (`signals.html`)
+- Category signal quality matrix
+- Category-level cohesion analysis
+- Tier distribution overview
 
-| Category | Tokens | Latest Fiedler | TIER |
-|----------|--------|----------------|------|
-| Infrastructure | 335 | 10.58 | TIER 1 |
-| Entertainment | 91 | 4.79 | TIER 2 |
-| DeFi | 223 | Variable | TIER 3 |
-| CeFi | 52 | 1.59 | TIER 3 |
+### 4. Cohesion (`cohesion.html`)
+- Cohesion score visualization by category (228 categories)
+- Interactive bar chart with tier colors
+- Category health metrics
+
+### 5. Network (`network.html`)
+- Interactive vis-network graph with token-category relationships
+- Buy/Avoid signal coloring (green/red)
+- Quick example buttons for popular categories (memes, defi, ai_agents)
+- Category filtering and search
 
 ---
 
 ## TIER Classification (Fiedler-Based)
 
-| Tier | Action | Fiedler | Description |
-|------|--------|---------|-------------|
-| **Tier 1** | BUY | ≥ 7.5 | Strong cohesion, sector rotation active |
-| **Tier 2** | ACCUMULATE | 3.0-7.5 | Moderate cohesion, building strength |
-| **Tier 3** | RESEARCH | 1.0-3.0 | Weak cohesion, individual selection |
-| **Tier 4** | MONITOR | < 1.0 | No cohesion, avoid sector plays |
-
-### Combined Score Classification (Alternative)
-
-| Tier | Action | Score | Formula |
-|------|--------|-------|---------|
-| **Tier 1** | BUY | ≥ 0.20 | momentum × fiedler_norm × trend |
-| **Tier 2** | ACCUMULATE | 0.10-0.20 | |
-| **Tier 3** | RESEARCH | 0.05-0.10 | |
-| **Tier 4** | MONITOR | < 0.05 | |
+| Tier | Action | Fiedler | Description | Count |
+|------|--------|---------|-------------|-------|
+| **Tier 1** | AGGRESSIVE BUY | ≥ 7.5 | Strong cohesion, sector rotation active | 225 |
+| **Tier 2** | ACCUMULATE | 3.0-7.5 | Moderate cohesion, building strength | 512 |
+| **Tier 3** | RESEARCH | 1.0-3.0 | Weak cohesion, individual selection | 348 |
+| **Tier 4** | MONITOR | < 1.0 | No cohesion, avoid sector plays | 421 |
 
 ---
 
-## Top Categories by Performance (Nov 2025)
+## Stage Classification (Breakout Scanner)
 
-### By Combined Score
-| Rank | Category | Score | Momentum | Fiedler |
-|------|----------|-------|----------|---------|
-| 1 | ledgerprime_portfolio | 1.049 | -8.70% | 113.60 |
-| 2 | zero_knowledge_proofs | 0.856 | -16.28% | 101.85 |
-| 3 | fenbushi_capital_portfolio | 0.838 | -18.45% | 102.24 |
-| 4 | masternodes | 0.565 | +4.54% | 51.93 |
-| 5 | privacy | 0.503 | +6.66% | 43.64 |
+Stages are determined from momentum and trend signals:
 
-### By Momentum
-| Rank | Category | Momentum | Fiedler |
-|------|----------|----------|---------|
-| 1 | x402_ecosystem | +9.60% | 20.17 |
-| 2 | privacy | +6.66% | 43.64 |
-| 3 | masternodes | +4.54% | 51.93 |
-| 4 | usd_stablecoin | -0.05% | 0.02 |
-| 5 | tokenized_gold | -0.45% | 4.00 |
+| Stage | Criteria | Priority | Action |
+|-------|----------|----------|--------|
+| **Super Trend** | BB(220,2) crossover + recent data + min $5 | HIGH | BUY |
+| **Early Breakout** | momentum > 0.05 + bull_ratio ≥ 0.5 | HIGH | BUY |
+| **Building** | momentum > 0 | MEDIUM | HOLD |
+| **Consolidation** | momentum ≈ 0 | LOW | WATCH |
+| **Declining** | momentum < 0 | AVOID | AVOID |
 
 ---
 
@@ -92,29 +78,27 @@ Sector-Rotation-Crypto/
 │   │   ├── main.py                 # Entry point (port 8003)
 │   │   └── routers/
 │   │       ├── sector_rotation.py  # Overview, category health APIs
-│   │       ├── breakout.py         # Momentum breakout APIs
+│   │       ├── breakout.py         # BB crossover + momentum APIs
 │   │       ├── network.py          # Network graph APIs
 │   │       └── signals.py          # Signal matrix APIs
 │   └── frontend/
 │       ├── index.html              # Main dashboard
-│       ├── breakout.html           # Momentum scanner
+│       ├── breakout.html           # SuperTrend + Breakout scanner
 │       ├── signals.html            # Signal quality matrix
 │       ├── cohesion.html           # Cohesion visualization
 │       └── network.html            # Interactive network graph
 ├── data/
-│   ├── crypto_category_summary.csv
-│   ├── crypto_category_tickers_mapping.json
-│   ├── monthly_fiedler_crypto_*.csv
+│   ├── actionable_tickers_*.csv    # Ticker recommendations (1,506 rows)
+│   ├── consolidated_ticker_analysis_*.json  # Category analysis (228 categories)
+│   ├── tier1_buy_now_*.csv         # Tier 1 candidates
+│   ├── tier2_accumulate_*.csv      # Tier 2 candidates
+│   ├── tier3_research_*.csv        # Tier 3 candidates
+│   ├── tier4_monitor_*.csv         # Tier 4 candidates
 │   ├── combined_score_ranking_*.csv
-│   ├── momentum_only_ranking_*.csv
-│   └── tier*_*.csv
-├── docs/
-│   ├── CRYPTO_CATEGORY_RANKINGS_TODAY.md
-│   └── INVESTMENT_RECOMMENDATIONS_*.md
-├── analysis/                       # Analysis reports
-├── reports/                        # Generated investment memos
-├── scripts/                        # Utility scripts
-├── theme_ticker_master.csv         # Category-ticker mapping (1,559 rows)
+│   └── monthly_fiedler_crypto_*.csv
+├── analysis/                       # Analysis reports & QA
+├── docs/                           # Documentation
+├── theme_ticker_master.csv         # Category-ticker mapping
 ├── config.py                       # Configuration
 ├── requirements.txt                # Python dependencies
 ├── railway.json                    # Railway deployment config
@@ -124,14 +108,82 @@ Sector-Rotation-Crypto/
 
 ---
 
+## API Endpoints
+
+### Overview APIs
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/overview/summary` | Market overview stats |
+| `GET /api/overview/top-picks` | Top breakout candidates |
+| `GET /api/overview/theme-health` | Category health with tier/signal |
+| `GET /api/overview/themes` | All category details |
+
+### Breakout APIs
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/breakout/candidates` | All breakout candidates |
+| `GET /api/breakout/stages` | Stage distribution (includes SuperTrend count) |
+| `GET /api/breakout/supertrend` | BB(220,2) crossover candidates |
+| `GET /api/breakout/by-category/{name}` | Category-specific candidates |
+
+### Signal APIs
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/signals/quality` | Signal quality metrics |
+| `GET /api/signals/filter-funnel` | Filtering stages visualization |
+| `GET /api/signals/tier-breakdown` | Detailed TIER statistics |
+| `GET /api/signals/top-signals` | Top signals by score |
+
+### Network APIs
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/network/graph-data` | Network graph nodes/edges |
+| `GET /api/network/graph-data?stock=BTC` | Token-centered graph |
+| `GET /api/network/graph-data?theme=memes` | Category-centered graph |
+| `GET /api/network/search?q=bitcoin` | Search tokens/categories |
+| `GET /api/network/stock-themes?name=ETH` | Get categories for a token |
+| `GET /api/network/theme-stocks?theme=defi` | Get tokens in a category |
+
+---
+
+## Top Categories by Performance (Dec 2025)
+
+### By Combined Score
+| Rank | Category | Score | Sector |
+|------|----------|-------|--------|
+| 1 | fenbushi_capital_portfolio | 0.414 | VC_Portfolio |
+| 2 | ledgerprime_portfolio | 0.335 | VC_Portfolio |
+| 3 | hacken_foundation | 0.304 | Other |
+| 4 | social_token | 0.298 | Other |
+| 5 | zero_knowledge_proofs | 0.281 | Privacy |
+| 6 | ai_memes | 0.257 | AI |
+| 7 | cybersecurity | 0.251 | Other |
+| 8 | ip_memes | 0.236 | Memes |
+| 9 | pump_fun_ecosystem | 0.225 | Ecosystem |
+| 10 | retail | 0.223 | Other |
+
+### Top TIER 1 Tokens
+| Token | Category | Action |
+|-------|----------|--------|
+| ZEC | zero_knowledge_proofs | AGGRESSIVE BUY |
+| DOT | fenbushi_capital_portfolio | AGGRESSIVE BUY |
+| ICP | fenbushi_capital_portfolio | AGGRESSIVE BUY |
+| FLOW | ledgerprime_portfolio | AGGRESSIVE BUY |
+| AI16Z | ai_memes | AGGRESSIVE BUY |
+| TURBO | ai_memes | AGGRESSIVE BUY |
+| WLD | zero_knowledge_proofs | AGGRESSIVE BUY |
+| STRK | zero_knowledge_proofs | AGGRESSIVE BUY |
+
+---
+
 ## Data Sources
 
 | Data Type | Location | Update |
 |-----------|----------|--------|
-| Category Rankings | `./Sector-Leaders-Crypto/results/` | Weekly |
+| Category Rankings | `../Sector-Leaders-Crypto/results/` | Weekly |
 | Category-Ticker Map | `./theme_ticker_master.csv` | As needed |
 | Historical Fiedler | `./data/monthly_fiedler_crypto_*.csv` | Monthly |
-| Regime Data | `/mnt/nas/AutoGluon/AutoML_Crypto/regime/` | Daily |
+| Price Data | `/mnt/nas/AutoGluon/AutoML_Crypto/CRYPTONOTTRAINED/` | Daily |
 
 ---
 
@@ -145,104 +197,58 @@ uvicorn main:app --host 0.0.0.0 --port 8003 --reload
 
 ### Access Dashboard
 - Local: http://localhost:8003/
+- Overview: http://localhost:8003/
+- Breakout: http://localhost:8003/breakout.html
+- Signals: http://localhost:8003/signals.html
+- Cohesion: http://localhost:8003/cohesion.html
+- Network: http://localhost:8003/network.html
 
-### Weekly Analysis
+### Test APIs
 ```bash
-# Run full weekly analysis
-./run_weekly_analysis.sh
+# Search tokens
+curl "http://localhost:8003/api/network/search?q=bitcoin"
 
-# Generate actionable tickers
-python generate_actionable_tickers.py
+# Get SuperTrend candidates
+curl "http://localhost:8003/api/breakout/supertrend"
 
-# Generate investment reports
-python generate_investment_report.py
+# Get category network
+curl "http://localhost:8003/api/network/graph-data?theme=memes"
 ```
 
 ---
 
 ## Category Deep Dive
 
-### AI & Big Data (7 categories)
-| Category | Description | Top Tokens |
-|----------|-------------|------------|
-| ai_&_big_data | General AI/ML | FET, RENDER, NEAR, ICP |
-| ai_agents | Autonomous agents | VIRTUAL, AI16Z |
-| ai_applications | AI apps | TAO, OLAS |
-| generative_ai | Gen AI | - |
-| defai | DeFi + AI | - |
+### AI Categories (7)
+| Category | Top Tokens |
+|----------|------------|
+| ai_&_big_data | FET, RENDER, NEAR, ICP |
+| ai_agents | VIRTUAL, AI16Z |
+| ai_memes | TURBO, ZEREBRO, FARTCOIN |
+| ai_applications | TAO, OLAS |
 
-### DeFi (10+ categories)
-| Category | Description | Top Tokens |
-|----------|-------------|------------|
-| defi | General DeFi | AAVE, UNI, MKR |
-| amm | AMM protocols | UNI, SUSHI, CRV |
-| derivatives | Derivatives | GMX, DYDX, SNX |
-| yield_farming | Yield farms | YFI, COMP |
-| liquid_staking | LSDs | LDO, RPL, SFRAX |
+### DeFi Categories (10+)
+| Category | Top Tokens |
+|----------|------------|
+| defi | AAVE, UNI, MKR |
+| amm | UNI, SUSHI, CRV |
+| derivatives | GMX, DYDX, SNX |
+| liquid_staking | LDO, RPL |
 
-### Gaming & Metaverse (5 categories)
-| Category | Description | Top Tokens |
-|----------|-------------|------------|
-| gaming | Gaming tokens | GALA, SAND, MANA |
-| metaverse | Virtual worlds | SAND, MANA, OVR |
-| play_to_earn | P2E games | AXS, ALICE |
-| gaming_guild | Guilds | YGG |
+### Memes Categories (9)
+| Category | Top Tokens |
+|----------|------------|
+| memes | DOGE, SHIB, PEPE |
+| animal_memes | DOGE, SHIB, BONK |
+| ai_memes | TURBO, AI16Z |
+| ip_memes | PONKE, NEIRO |
 
-### Privacy (3 categories)
-| Category | Description | Top Tokens |
-|----------|-------------|------------|
-| privacy | Privacy coins | XMR, ZEC, DASH |
-| zero_knowledge_proofs | ZK tech | MATIC, MINA, IMX |
-| cybersecurity | Security | - |
-
-### Memes (9 categories)
-| Category | Description | Top Tokens |
-|----------|-------------|------------|
-| memes | General memes | DOGE, SHIB, PEPE |
-| animal_memes | Animal themed | DOGE, SHIB, BONK |
-| ai_memes | AI memes | TURBO |
-| political_memes | Political | TRUMP, MAGA |
-
-### Ecosystem (17+ categories)
-| Ecosystem | Top Tokens | Notes |
-|-----------|------------|-------|
-| solana_ecosystem | SOL, JUP, RAY, BONK | High activity |
-| ethereum_ecosystem | ETH, AAVE, UNI | Largest |
-| bnb_chain_ecosystem | BNB, CAKE | Binance |
-| bitcoin_ecosystem | BTC, ORDI, RUNES | BRC-20 |
-| base_ecosystem | BASE tokens | Coinbase L2 |
-| arbitrum_ecosystem | ARB, GMX | Leading L2 |
-
----
-
-## Investment Framework
-
-### Actionable Categories (Oct 2025)
-
-**TIER 1 - BUY**
-- Infrastructure (Fiedler 10.58): PAXG, ZEC, DASH, ZEN, MKR, SNX
-
-**TIER 2 - ACCUMULATE**
-- Entertainment (Fiedler 4.79): AXS, SAND, MANA, ENJ
-
-### Position Sizing by Regime
-
-| Regime | LONG Prob | Position Size |
-|--------|-----------|---------------|
-| Strong LONG | ≥ 0.80 | 3-5% per token |
-| LONG | 0.50-0.79 | 2-3% per token |
-| NEUTRAL | 0.40-0.49 | 1-2% per token |
-| SHORT | < 0.40 | 0% (avoid) |
-
-### Portfolio Allocation
-
-```
-Total Crypto Allocation: 100%
-├── 50-60% → TIER 1 Categories (Infrastructure)
-├── 20-30% → TIER 2 Categories (Entertainment)
-├── 10-20% → TIER 3 (Selective)
-└── 10-20% → Cash/Stablecoins
-```
+### Privacy Categories (3)
+| Category | Top Tokens |
+|----------|------------|
+| privacy | XMR, ZEC, DASH |
+| zero_knowledge_proofs | ZEN, STRK, WLD, ALEO |
+| cybersecurity | HAPI, UTK |
 
 ---
 
@@ -250,15 +256,15 @@ Total Crypto Allocation: 100%
 
 ### Market Characteristics
 - **24/7 Trading**: No market close, continuous price discovery
-- **High Volatility**: 65-92% typical, adjust correlation thresholds
+- **High Volatility**: 40-100%+ typical, adjust thresholds accordingly
 - **Correlation Regimes**: Strong bull/bear correlation patterns
-- **BTC Dominance**: Market leader affects all sectors
+- **BTC Dominance**: Market leader affects all categories
 
 ### Framework Adaptations
 - **Higher Correlation Threshold**: 0.30 (vs 0.25 for equities)
-- **Longer Lookback**: 60 days (vs 30 for equities)
+- **Longer Lookback**: BB(220, 2.0) for SuperTrend calculation
 - **Fiedler Thresholds**: 7.5/3.0/1.0 (adapted for crypto)
-- **Disconnection Tolerance**: Crypto sectors disconnect more frequently
+- **Price Filter**: Min $5 for SuperTrend to avoid micro-caps
 
 ### Risk Factors
 - **Regulatory Risk**: SEC/CFTC actions
@@ -278,6 +284,7 @@ Total Crypto Allocation: 100%
 | Currency | USD | USD | KRW | JPY |
 | Trading Hours | 24/7 | 9:30-16:00 ET | 9:00-15:30 KST | 9:00-15:00 JST |
 | Dashboard Port | 8003 | 8001 | 8000 | 8002 |
+| BB Parameters | (220, 2.0) | (220, 2.0) | (220, 2.0) | (220, 2.0) |
 
 ---
 
@@ -285,13 +292,11 @@ Total Crypto Allocation: 100%
 
 | Market | URL | Port | Status |
 |--------|-----|------|--------|
-| USA | Railway | 8001 | Live |
 | KRX | Railway | 8000 | Live |
+| USA | Railway | 8001 | Live |
 | Japan | Local | 8002 | WIP |
+| **Crypto** | Local | 8003 | **Live** |
 | China | Local | 8004 | WIP |
-| India | Local | 8005 | WIP |
-| Hong Kong | Railway | 8006 | Live |
-| **Crypto** | Local | 8003 | **Setup** |
 
 ---
 
@@ -300,38 +305,23 @@ Total Crypto Allocation: 100%
 | Project | Path | Description |
 |---------|------|-------------|
 | Sector-Leaders-Crypto | `../Sector-Leaders-Crypto/` | Category rankings |
-| Old Crypto Analysis | `../Sector-Rotation-Crypto-2026-02-01/` | Historical data |
-| AutoML Crypto | `/mnt/nas/AutoGluon/AutoML_Crypto/` | Regime data |
+| AutoML Crypto | `/mnt/nas/AutoGluon/AutoML_Crypto/` | Price data & regime |
 
 ---
 
-## Recent Analysis (Nov 2025)
+## Recent Updates (2026-02-02)
 
-### Top Performers
-1. **ledgerprime_portfolio** - Score 1.049, Trend 113.60
-2. **zero_knowledge_proofs** - Score 0.856, Trend 101.85
-3. **privacy** - Score 0.503, Momentum +6.66%
+### Dashboard Setup
+1. Cloned from Sector-Rotation-USA
+2. Updated all routers for crypto data format
+3. Fixed cohesion.html (categories array support)
+4. Fixed network.html (categories array support)
+5. Added BB(220, 2.0) crossover calculation with filters
 
-### Momentum Leaders
-1. **x402_ecosystem** - +9.60%
-2. **privacy** - +6.66%
-3. **masternodes** - +4.54%
-
-### Category Distribution
-- **Tier 1 (Core)**: 9 categories
-- **Tier 2 (Rotational)**: 5 categories
-- **Tier 3 (Research)**: 7 categories
-- **Tier 4 (Monitor)**: 190+ categories
-
----
-
-## Next Steps
-
-1. [ ] Adapt dashboard frontend for crypto categories
-2. [ ] Update API endpoints for CoinGecko data
-3. [ ] Implement real-time price feeds
-4. [ ] Add regime integration from AutoML_Crypto
-5. [ ] Deploy to Railway
+### Data Processing
+- Consolidated analysis: 228 categories, 1,506 tokens
+- Tier distribution: 225 T1, 512 T2, 348 T3, 421 T4
+- SuperTrend candidates: 6 tokens passing all filters
 
 ---
 
