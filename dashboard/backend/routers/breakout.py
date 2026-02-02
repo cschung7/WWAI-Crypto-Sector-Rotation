@@ -147,12 +147,13 @@ def get_ticker_price_info(ticker: str) -> Dict:
         return {}
 
 
-def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25") -> List[Dict]:
+def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25", min_price: float = 5.0) -> List[Dict]:
     """
     Compute BB(220, 2.0) crossovers from price data.
     Returns tickers where price is above upper Bollinger Band.
     Only includes tickers with data updated on or after min_date.
     Filters out zero/missing price data before BB calculation.
+    Filters out tickers with price < min_price ($5 default).
     """
     crossover_tickers = []
 
@@ -196,8 +197,8 @@ def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25") -> List
             if pd.isna(last_upper) or last_upper == 0:
                 continue
 
-            # Check if price is above upper BB
-            if last_close > last_upper:
+            # Check if price is above upper BB and meets min_price threshold
+            if last_close > last_upper and last_close >= min_price:
                 deviation_pct = (last_close - last_upper) / last_upper * 100
 
                 # Get price change (from valid prices only)
