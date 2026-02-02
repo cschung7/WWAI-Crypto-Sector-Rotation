@@ -171,12 +171,14 @@ def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25", min_pri
                         ticker = t.get('ticker', '')
                         ticker_clean = t.get('ticker_clean', ticker.replace('-USD', ''))
                         crossover_tickers.append({
-                            'ticker': ticker,
+                            'ticker': ticker_clean,  # Use clean ticker without -USD
                             'ticker_clean': ticker_clean,
                             'category': category_map.get(ticker.upper(), category_map.get(ticker_clean.upper(), '')),
                             'close': t.get('close', 0),
-                            'upper_band': t.get('upper_band', 0),
+                            'bb_upper': t.get('upper_band', t.get('bb_upper', 0)),  # Support both formats
                             'deviation_pct': t.get('deviation_pct', 0),
+                            'change_pct': 0,  # Not available in cache
+                            'last_date': t.get('last_date', ''),
                             'signal': 'BB Crossover',
                             'stage': 'Super Trend',
                             'priority': 'HIGH'
