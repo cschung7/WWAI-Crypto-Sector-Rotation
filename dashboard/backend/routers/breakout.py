@@ -147,10 +147,12 @@ def get_ticker_price_info(ticker: str) -> Dict:
         return {}
 
 
-def compute_bb_crossovers(limit: int = 50) -> List[Dict]:
+def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25") -> List[Dict]:
     """
     Compute BB(220, 2.0) crossovers from price data.
     Returns tickers where price is above upper Bollinger Band.
+    Only includes tickers with data updated on or after min_date.
+    Filters out zero/missing price data before BB calculation.
     """
     crossover_tickers = []
 
@@ -164,15 +166,31 @@ def compute_bb_crossovers(limit: int = 50) -> List[Dict]:
             df = pd.read_csv(price_file, index_col=0)
             df.columns = [col.lower() for col in df.columns]
 
-            if 'close' not in df.columns or len(df) < 220:
+            if 'close' not in df.columns:
                 continue
 
-            close = df['close']
+            # Check if data is recent enough (last date >= min_date)
+            last_date = df.index[-1]
+            if str(last_date) < min_date:
+                continue
+
+            # Filter out zero and NaN close prices BEFORE calculating BB
+            close = df['close'].replace(0, pd.NA).dropna()
+
+            # Need at least 220 valid data points
+            if len(close) < 220:
+                continue
+
+            # Skip if last close is NaN or 0
+            last_close = close.iloc[-1]
+            if pd.isna(last_close) or last_close == 0:
+                continue
+
+            # Calculate BB on clean data
             bb_middle = close.rolling(220).mean()
             bb_std = close.rolling(220).std(ddof=1)
             bb_upper = bb_middle + (bb_std * 2.0)
 
-            last_close = close.iloc[-1]
             last_upper = bb_upper.iloc[-1]
 
             if pd.isna(last_upper) or last_upper == 0:
@@ -182,8 +200,8 @@ def compute_bb_crossovers(limit: int = 50) -> List[Dict]:
             if last_close > last_upper:
                 deviation_pct = (last_close - last_upper) / last_upper * 100
 
-                # Get price change
-                prev_close = close.iloc[-2] if len(df) >= 2 else last_close
+                # Get price change (from valid prices only)
+                prev_close = close.iloc[-2] if len(close) >= 2 else last_close
                 change_pct = (last_close - prev_close) / prev_close * 100 if prev_close else 0
 
                 # Format prices - use scientific notation for very small values
@@ -199,7 +217,8 @@ def compute_bb_crossovers(limit: int = 50) -> List[Dict]:
                     'close': close_fmt,
                     'bb_upper': upper_fmt,
                     'deviation_pct': round(deviation_pct, 2),
-                    'change_pct': round(change_pct, 2)
+                    'change_pct': round(change_pct, 2),
+                    'last_date': str(last_date)
                 })
         except Exception:
             continue
@@ -610,6 +629,7 @@ async def get_supertrend_candidates(
                 'close': bb_item['close'],
                 'bb_upper': bb_item['bb_upper'],
                 'change_pct': bb_item['change_pct'],
+                'last_date': bb_item.get('last_date', ''),
                 'in_green': in_green,
                 'in_tstop': in_tstop,
             })
