@@ -123,21 +123,91 @@ def get_ticker_price_info(ticker: str) -> Dict:
         last_upper = bb_upper.iloc[-1]
         deviation_pct = (last_close - last_upper) / last_upper * 100 if last_upper else 0
 
+        # Check for BB crossover (price crossed above upper band)
+        prev_close = close.iloc[-2] if len(df) >= 2 else last_close
+        prev_upper = bb_upper.iloc[-2] if len(df) >= 2 else last_upper
+
+        # Crossover: was below, now above
+        crossed_above = (prev_close <= prev_upper) and (last_close > last_upper) if not pd.isna(prev_upper) else False
+        # Currently above upper band
+        above_upper = last_close > last_upper if not pd.isna(last_upper) else False
+
         # Get price change
-        if len(df) >= 2:
-            prev_close = close.iloc[-2]
-            change_pct = (last_close - prev_close) / prev_close * 100 if prev_close else 0
-        else:
-            change_pct = 0
+        change_pct = (last_close - prev_close) / prev_close * 100 if prev_close else 0
 
         return {
             'close': round(last_close, 4),
             'bb_upper': round(last_upper, 4) if not pd.isna(last_upper) else 0,
             'deviation_pct': round(deviation_pct, 2),
-            'change_pct': round(change_pct, 2)
+            'change_pct': round(change_pct, 2),
+            'crossed_above': crossed_above,
+            'above_upper': above_upper
         }
     except Exception:
         return {}
+
+
+def compute_bb_crossovers(limit: int = 50) -> List[Dict]:
+    """
+    Compute BB(220, 2.0) crossovers from price data.
+    Returns tickers where price is above upper Bollinger Band.
+    """
+    crossover_tickers = []
+
+    # Get list of price files
+    price_files = list(PRICE_DIR.glob("*-USD.csv"))
+
+    for price_file in price_files:
+        ticker = price_file.stem.replace("-USD", "")
+
+        try:
+            df = pd.read_csv(price_file, index_col=0)
+            df.columns = [col.lower() for col in df.columns]
+
+            if 'close' not in df.columns or len(df) < 220:
+                continue
+
+            close = df['close']
+            bb_middle = close.rolling(220).mean()
+            bb_std = close.rolling(220).std(ddof=1)
+            bb_upper = bb_middle + (bb_std * 2.0)
+
+            last_close = close.iloc[-1]
+            last_upper = bb_upper.iloc[-1]
+
+            if pd.isna(last_upper) or last_upper == 0:
+                continue
+
+            # Check if price is above upper BB
+            if last_close > last_upper:
+                deviation_pct = (last_close - last_upper) / last_upper * 100
+
+                # Get price change
+                prev_close = close.iloc[-2] if len(df) >= 2 else last_close
+                change_pct = (last_close - prev_close) / prev_close * 100 if prev_close else 0
+
+                # Format prices - use scientific notation for very small values
+                if last_close < 0.0001:
+                    close_fmt = f"{last_close:.2e}"
+                    upper_fmt = f"{last_upper:.2e}"
+                else:
+                    close_fmt = round(last_close, 6)
+                    upper_fmt = round(last_upper, 6)
+
+                crossover_tickers.append({
+                    'ticker': ticker,
+                    'close': close_fmt,
+                    'bb_upper': upper_fmt,
+                    'deviation_pct': round(deviation_pct, 2),
+                    'change_pct': round(change_pct, 2)
+                })
+        except Exception:
+            continue
+
+    # Sort by deviation (how far above the upper band)
+    crossover_tickers = sorted(crossover_tickers, key=lambda x: x['deviation_pct'], reverse=True)
+
+    return crossover_tickers[:limit]
 
 
 def load_filter_data(filter_type: str = "lrs_green_cross_strategy") -> Dict:
@@ -462,68 +532,32 @@ async def get_supertrend_candidates(
     limit: int = Query(50, description="Max results")
 ) -> Dict[str, Any]:
     """
-    Get SuperTrend candidates - tickers that crossed above Bollinger Band upper.
+    Get SuperTrend candidates - tickers where price is above BB(220, 2.0) upper band.
+    Computes BB crossovers from actual price data.
     """
     try:
-        bb_data = load_bb_filtered_tickers()
+        # Compute BB crossovers from price data
+        bb_crossovers = compute_bb_crossovers(limit=limit * 2)  # Get more to filter
 
-        # Check if we have actual tickers in the BB data
-        has_bb_tickers = False
-        tickers = []
-        data_date = date
-
-        if bb_data:
-            if date and date in bb_data:
-                tickers = bb_data[date]
-                data_date = date
-            else:
-                # Find latest date with actual tickers
-                dates = sorted(bb_data.keys(), reverse=True)
-                for d in dates:
-                    if bb_data[d]:  # Has tickers
-                        tickers = bb_data[d]
-                        data_date = d
-                        has_bb_tickers = True
-                        break
-                if not has_bb_tickers and dates:
-                    data_date = dates[0]
-
-        # Fallback: use top momentum tickers if no BB data
-        if not tickers:
-            df = load_actionable_tickers()
-            df_top = df[df['momentum'] > 0.05].nlargest(limit, 'momentum')
-
-            if df_top.empty:
-                # If no positive momentum, just get top by combined score
-                df_top = df.nlargest(limit, 'combined_score')
-
-            candidates = []
-            for _, row in df_top.iterrows():
-                candidates.append({
-                    'ticker': row['ticker'],
-                    'score': int(safe_float(row['combined_score']) * 100),
-                    'stage': "Super Trend",
-                    'priority': "HIGH",
-                    'strategy': "Bull Quiet" if row['tier'] == 'Tier 1' else "Transition",
-                    'category': row.get('category', row.get('theme', '')),
-                    'deviation': 0,
-                    'in_green': False,
-                    'in_tstop': False,
-                })
-
+        if not bb_crossovers:
             return {
-                "candidates": candidates,
-                "count": len(candidates),
-                "total_available": len(candidates),
-                "date": data_date or datetime.now().strftime('%Y-%m-%d'),
+                "candidates": [],
+                "count": 0,
+                "total_available": 0,
+                "date": datetime.now().strftime('%Y-%m-%d'),
                 "parameters": {"bb_period": 220, "bb_multiplier": 2.0},
-                "note": "Using momentum-based selection (BB crossover data empty)"
+                "note": "No tickers currently above upper Bollinger Band (220, 2.0)"
             }
 
         # Load actionable tickers for enrichment
         try:
             df = load_actionable_tickers()
-            ticker_data = df.set_index('ticker').to_dict('index')
+            ticker_data = {}
+            for _, row in df.iterrows():
+                # Index by both formats
+                ticker_data[row['ticker']] = row.to_dict()
+                ticker_clean = row.get('ticker_clean', row['ticker'].replace('-USD', ''))
+                ticker_data[ticker_clean] = row.to_dict()
         except:
             ticker_data = {}
 
@@ -532,24 +566,22 @@ async def get_supertrend_candidates(
 
         # Load filter data for green/tstop status
         green_data = load_filter_data("lrs_green_cross_strategy")
-        green_tickers = get_green_tickers_for_date(green_data, data_date)
+        green_tickers = get_green_tickers_for_date(green_data)
 
-        tstop_data = load_filter_data("tstop_filtered")
         tstop_tickers = set()
 
         candidates = []
-        for ticker in tickers[:limit]:
-            # Normalize ticker
-            ticker_clean = ticker.replace('-USD', '').upper()
-            price_info = get_ticker_price_info(ticker_clean)
+        for bb_item in bb_crossovers[:limit]:
+            ticker = bb_item['ticker']
+            ticker_with_suffix = f"{ticker}-USD"
 
             # Get enrichment data
-            enrich = ticker_data.get(ticker_clean, ticker_data.get(ticker, {}))
+            enrich = ticker_data.get(ticker, ticker_data.get(ticker_with_suffix, {}))
             momentum = safe_float(enrich.get('momentum', 0))
             combined_score = safe_float(enrich.get('combined_score', 0))
 
-            in_green = ticker_clean in green_tickers
-            in_tstop = ticker_clean in tstop_tickers
+            in_green = ticker in green_tickers
+            in_tstop = ticker in tstop_tickers
 
             tier = enrich.get('tier', '')
             if tier == 'Tier 1':
@@ -559,32 +591,36 @@ async def get_supertrend_candidates(
             elif momentum > 0:
                 strategy = "Ranging"
             else:
-                strategy = "Bull Quiet"
+                strategy = "Breakout"
 
-            deviation = price_info.get('deviation_pct', 0)
-            score = int(combined_score * 100) if combined_score else int(min(deviation * 10, 100))
+            # Score based on deviation from BB upper (higher = stronger breakout)
+            deviation = bb_item['deviation_pct']
+            score = int(min(deviation * 5, 100))  # Scale deviation to 0-100
 
-            category = category_map.get(ticker_clean, '') or enrich.get('category', '')
+            category = category_map.get(ticker, '') or enrich.get('category', enrich.get('theme', ''))
 
             candidates.append({
-                'ticker': ticker_clean,
+                'ticker': ticker,
                 'score': score,
                 'stage': "Super Trend",
                 'priority': "HIGH",
                 'strategy': strategy,
                 'category': category,
                 'deviation': round(deviation, 2),
+                'close': bb_item['close'],
+                'bb_upper': bb_item['bb_upper'],
+                'change_pct': bb_item['change_pct'],
                 'in_green': in_green,
                 'in_tstop': in_tstop,
             })
 
-        candidates = sorted(candidates, key=lambda x: x['score'], reverse=True)
+        # Already sorted by deviation in compute_bb_crossovers
 
         return {
             "candidates": candidates,
             "count": len(candidates),
-            "total_available": len(tickers),
-            "date": data_date,
+            "total_available": len(bb_crossovers),
+            "date": datetime.now().strftime('%Y-%m-%d'),
             "parameters": {"bb_period": 220, "bb_multiplier": 2.0},
             "note": "Tickers crossing above upper Bollinger Band (220, 2.0)"
         }
