@@ -28,7 +28,15 @@ def load_theme_tickers() -> pd.DataFrame:
     """Load theme-ticker mapping"""
     if not THEME_TICKER_MASTER.exists():
         raise HTTPException(status_code=404, detail="Theme ticker master not found")
-    return pd.read_csv(THEME_TICKER_MASTER)
+    df = pd.read_csv(THEME_TICKER_MASTER)
+    # Normalize column names - support both 'theme' and 'category'
+    if 'category' in df.columns and 'theme' not in df.columns:
+        df['theme'] = df['category']
+    if 'weight' not in df.columns:
+        df['weight'] = 1.0  # Default weight for crypto
+    if 'company' not in df.columns:
+        df['company'] = df.get('ticker_clean', df['ticker'])
+    return df
 
 
 def load_consolidated() -> Dict:
@@ -39,6 +47,23 @@ def load_consolidated() -> Dict:
 
     with open(files[0]) as f:
         return json.load(f)
+
+
+def get_themes_dict(consolidated: Dict) -> Dict:
+    """Convert categories array to themes dict if needed"""
+    # If already has themes dict, return it
+    if 'themes' in consolidated and isinstance(consolidated['themes'], dict):
+        return consolidated['themes']
+
+    # Convert categories array to dict
+    themes = {}
+    categories = consolidated.get('categories', [])
+    if isinstance(categories, list):
+        for cat in categories:
+            theme_name = cat.get('theme', '')
+            if theme_name:
+                themes[theme_name] = cat
+    return themes
 
 
 def load_actionable_tickers() -> pd.DataFrame:
@@ -135,7 +160,7 @@ async def search_all(
 
         # Search themes
         theme_matches = []
-        themes = consolidated.get('themes', {})
+        themes = get_themes_dict(consolidated)
 
         for theme, info in themes.items():
             if fuzzy_match(q, theme):
@@ -188,7 +213,7 @@ async def get_graph_data(
                 return
             node_ids.add(node_id)
 
-            theme_info = consolidated.get('themes', {}).get(theme_name, {})
+            theme_info = get_themes_dict(consolidated).get(theme_name, {})
             fiedler = safe_float(theme_info.get('fiedler', 0))
 
             nodes.append({
@@ -299,7 +324,7 @@ async def get_graph_data(
 
         else:
             # Default: Show all themes with connections
-            themes = consolidated.get('themes', {})
+            themes = get_themes_dict(consolidated)
 
             # Add all theme nodes
             for theme_name, theme_info in themes.items():
@@ -364,7 +389,7 @@ async def get_stock_themes(name: str) -> Dict[str, Any]:
         themes = []
         for _, row in stock_data.iterrows():
             theme_name = row['theme']
-            theme_info = consolidated.get('themes', {}).get(theme_name, {})
+            theme_info = get_themes_dict(consolidated).get(theme_name, {})
             fiedler = safe_float(theme_info.get('fiedler', 0))
 
             themes.append({
@@ -413,7 +438,7 @@ async def get_theme_stocks(
         if theme_data.empty:
             raise HTTPException(status_code=404, detail=f"Theme not found: {theme_name}")
 
-        theme_info = consolidated.get('themes', {}).get(theme_name, {})
+        theme_info = get_themes_dict(consolidated).get(theme_name, {})
         fiedler = safe_float(theme_info.get('fiedler', 0))
 
         stocks = []
