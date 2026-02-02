@@ -1,6 +1,6 @@
 """
-Network Graph API Router - USA Sector Rotation
-Adapted from KRX system for US market
+Network Graph API Router - Crypto Sector Rotation
+Interactive network visualization for cryptocurrency categories
 """
 
 from fastapi import APIRouter, HTTPException, Query

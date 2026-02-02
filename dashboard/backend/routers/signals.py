@@ -1,5 +1,5 @@
 """
-USA Sector Rotation Dashboard - Signals Router
+Crypto Sector Rotation Dashboard - Signals Router
 Signal quality analysis and filtering endpoints
 """
 
