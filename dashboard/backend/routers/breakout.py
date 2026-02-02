@@ -17,11 +17,13 @@ router = APIRouter()
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
-# AutoML Crypto paths
+# AutoML Crypto paths - optional for cloud deployment
 AUTOML_CRYPTO_DIR = Path("/mnt/nas/AutoGluon/AutoML_Crypto")
 FILTER_DIR = AUTOML_CRYPTO_DIR / "Filter"
 DB_DIR = AUTOML_CRYPTO_DIR / "DB"
 PRICE_DIR = AUTOML_CRYPTO_DIR / "CRYPTONOTTRAINED"
+# Check if paths exist (won't exist on Railway deployment)
+HAS_PRICE_DATA = PRICE_DIR.exists()
 
 # Cache for category lookup
 _category_cache = None
@@ -156,6 +158,10 @@ def compute_bb_crossovers(limit: int = 50, min_date: str = "2026-01-25", min_pri
     Filters out tickers with price < min_price ($5 default).
     """
     crossover_tickers = []
+
+    # Return empty if no price data available (cloud deployment)
+    if not HAS_PRICE_DATA:
+        return crossover_tickers
 
     # Get list of price files
     price_files = list(PRICE_DIR.glob("*-USD.csv"))

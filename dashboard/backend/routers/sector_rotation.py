@@ -15,7 +15,10 @@ router = APIRouter()
 # Data directory
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
+# Try external path first, fall back to local data directory
 SECTOR_LEADERS_RESULTS = Path("/mnt/nas/WWAI/Sector-Rotation/Sector-Leaders-Crypto/results")
+if not SECTOR_LEADERS_RESULTS.exists():
+    SECTOR_LEADERS_RESULTS = DATA_DIR  # Use local data directory for cloud deployment
 
 
 def safe_float(value) -> float:
