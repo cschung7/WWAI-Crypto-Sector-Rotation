@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Momentum Scanner | Crypto Sector Rotation</title>
-    <!-- Version: 2026.02.03.v2 - India-style implementation -->
+    <!-- Version: 2026.02.03.v3 - Added SuperTrend section -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -235,6 +235,17 @@
             </div>
         </div>
 
+        <!-- SuperTrend Candidates -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🚀 SuperTrend Candidates</span>
+                <span id="supertrendNote" style="color: #10b981; font-size: 0.75rem;">High Momentum Tokens</span>
+            </div>
+            <div id="supertrendTable">
+                <div class="loading">Loading SuperTrend candidates...</div>
+            </div>
+        </div>
+
         <!-- Long Term Trend Breakout (BB 220,2 Crossover) -->
         <div class="card">
             <div class="card-header">
@@ -300,9 +311,67 @@
                 loadStageDistribution(),
                 loadExpectedReturns(),
                 loadDailySummary(),
+                loadSupertrendCandidates(),
                 loadLongTermTrendBreakout(),
                 loadBreakoutCandidates()
             ]);
+        }
+
+        async function loadSupertrendCandidates() {
+            try {
+                const response = await fetch(`${API_BASE}/api/breakout/supertrend-candidates?limit=20`);
+                const data = await response.json();
+
+                const container = document.getElementById('supertrendTable');
+
+                if (data.candidates && data.candidates.length > 0) {
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Score</th>
+                                    <th>Stage</th>
+                                    <th>Priority</th>
+                                    <th>Category</th>
+                                    <th>Deviation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.candidates.forEach(c => {
+                        const stageClass = c.stage.toLowerCase().replace(' ', '-');
+                        const deviationClass = c.deviation >= 0 ? 'deviation-positive' : 'deviation-negative';
+                        const deviationSign = c.deviation >= 0 ? '+' : '';
+                        const scorePct = Math.min(100, c.score);
+
+                        html += `
+                            <tr>
+                                <td><strong style="color: #3b82f6;">${c.ticker}</strong></td>
+                                <td>
+                                    ${c.score}
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${scorePct}%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="stage-badge ${stageClass}">${c.stage}</span></td>
+                                <td><span class="priority-badge ${c.priority}">${c.priority}</span></td>
+                                <td style="font-size: 0.8rem;">${c.category || '-'}</td>
+                                <td class="${deviationClass}">${deviationSign}${c.deviation.toFixed(2)}%</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No SuperTrend signals today</p>';
+                }
+            } catch (error) {
+                console.error('Error loading SuperTrend:', error);
+                document.getElementById('supertrendTable').innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading SuperTrend data</p>';
+            }
         }
 
         async function loadSummaryCards() {
