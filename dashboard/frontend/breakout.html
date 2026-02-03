@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Momentum Scanner - Crypto Sector Rotation</title>
-    <!-- Version: 2026.02.03.v1 - SuperTrend fix -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <title>Momentum Scanner | Crypto Sector Rotation</title>
+    <!-- Version: 2026.02.03.v2 - India-style implementation -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -25,6 +21,7 @@
         }
         .header h1 { font-size: 2rem; font-weight: bold; margin-bottom: 0.5rem; }
         .header p { color: #94a3b8; }
+        .market-flag { font-size: 2rem; margin-right: 0.5rem; color: #F7931A; }
         .nav-links { display: flex; gap: 1rem; margin-top: 1rem; }
         .nav-links a {
             color: #94a3b8;
@@ -35,192 +32,145 @@
         }
         .nav-links a:hover, .nav-links a.active { background: #334155; color: #f8fafc; }
         .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-        .data-freshness {
-            background: #334155;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            color: #94a3b8;
-            display: inline-block;
-            margin-bottom: 1rem;
-        }
-        .summary-grid {
+
+        /* Summary Cards */
+        .summary-cards {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        @media (max-width: 1200px) {
-            .summary-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        @media (max-width: 768px) {
-            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            margin-bottom: 1.5rem;
         }
         .summary-card {
             background: #1e293b;
             border-radius: 0.75rem;
-            padding: 1.5rem;
-            border-left: 4px solid #3b82f6;
+            padding: 1.25rem;
+            border: 1px solid #334155;
+            text-align: center;
         }
-        .summary-card.positive { border-left-color: #10b981; }
-        .summary-card.negative { border-left-color: #ef4444; }
-        .summary-label { color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
         .summary-value { font-size: 2rem; font-weight: bold; }
-        .section {
+        .summary-value.green { color: #10b981; }
+        .summary-value.blue { color: #3b82f6; }
+        .summary-value.yellow { color: #f59e0b; }
+        .summary-value.pink { color: #f472b6; }
+        .summary-value.purple { color: #8b5cf6; }
+        .summary-label { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }
+        .summary-date { font-size: 0.6875rem; color: #64748b; margin-top: 0.5rem; }
+
+        .card {
             background: #1e293b;
             border-radius: 0.75rem;
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            border: 1px solid #334155;
+            margin-bottom: 1.5rem;
         }
-        .section h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #f8fafc; }
-        .charts-row {
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+        .card-title { font-size: 1.25rem; font-weight: 600; }
+
+        /* Charts Grid */
+        .charts-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
-        @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
         .chart-container {
             background: #1e293b;
             border-radius: 0.75rem;
-            padding: 1.5rem;
+            padding: 1rem;
+            border: 1px solid #334155;
         }
-        .chart-container h3 { font-size: 1rem; margin-bottom: 1rem; color: #94a3b8; }
-        .chart-wrapper { height: 300px; position: relative; }
-        .filters {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        .filter-group label { font-size: 0.75rem; color: #94a3b8; }
-        .filter-group select, .filter-group input {
+        .chart-container h3 { font-size: 0.875rem; margin-bottom: 0.75rem; color: #94a3b8; }
+        .chart-wrapper { height: 200px; position: relative; }
+
+        /* Filters */
+        .filters { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .filter-label { font-size: 0.75rem; color: #94a3b8; }
+        select, input {
             background: #334155;
             border: 1px solid #475569;
+            color: #f8fafc;
+            padding: 0.5rem 1rem;
             border-radius: 0.375rem;
-            padding: 0.5rem;
-            color: #f8fafc;
-            min-width: 150px;
-        }
-        .filter-group select:focus, .filter-group input:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-        /* DataTables dark theme */
-        .dataTables_wrapper { color: #f8fafc; }
-        table.dataTable { border-collapse: collapse; width: 100%; }
-        table.dataTable thead th {
-            background: #334155;
-            color: #f8fafc;
-            padding: 0.75rem;
-            border-bottom: 2px solid #475569;
-            text-align: left;
-        }
-        table.dataTable tbody tr { background: #1e293b; border-bottom: 1px solid #334155; }
-        table.dataTable tbody tr:hover { background: #334155; }
-        table.dataTable tbody td { padding: 0.75rem; color: #cbd5e1; }
-        .dataTables_filter input {
-            background: #334155;
-            border: 1px solid #475569;
-            border-radius: 0.375rem;
-            padding: 0.5rem;
-            color: #f8fafc;
-            margin-left: 0.5rem;
-        }
-        .dataTables_length select {
-            background: #334155;
-            border: 1px solid #475569;
-            border-radius: 0.375rem;
-            padding: 0.25rem;
-            color: #f8fafc;
-        }
-        .dataTables_info, .dataTables_paginate { margin-top: 1rem; color: #94a3b8; }
-        .dataTables_paginate .paginate_button {
-            background: #334155;
-            border: none;
-            border-radius: 0.375rem;
-            padding: 0.25rem 0.75rem;
-            margin: 0 0.25rem;
-            color: #f8fafc !important;
-            cursor: pointer;
-        }
-        .dataTables_paginate .paginate_button.current { background: #3b82f6; }
-        .dataTables_paginate .paginate_button:hover { background: #475569; }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .badge-high { background: #10b981; color: white; }
-        .badge-medium { background: #f59e0b; color: black; }
-        .badge-low { background: #64748b; color: white; }
-        .badge-avoid { background: #ef4444; color: white; }
-        .score-bar {
-            background: #334155;
-            border-radius: 0.25rem;
-            height: 8px;
-            width: 100px;
-            display: inline-block;
-            margin-left: 0.5rem;
-            vertical-align: middle;
-        }
-        .score-fill { background: #10b981; height: 100%; border-radius: 0.25rem; }
-        .loading { text-align: center; padding: 2rem; color: #94a3b8; }
-        .market-flag {
-            color: #F7931A; /* Bitcoin orange */ font-size: 2rem; margin-right: 0.5rem; }
-        /* SuperTrend cards */
-        .supertrend-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 0.75rem;
-        }
-        .supertrend-card {
-            background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
-            border: 1px solid #3b82f6;
-            border-radius: 0.5rem;
-            padding: 0.75rem;
-            transition: all 0.2s;
-        }
-        .supertrend-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        .supertrend-ticker {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #3b82f6;
-            margin-bottom: 0.25rem;
-        }
-        .supertrend-price {
-            color: #f8fafc;
             font-size: 0.875rem;
         }
-        .supertrend-deviation {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
+        select:focus, input:focus { outline: none; border-color: #3b82f6; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; font-weight: 600; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+        tr:hover { background: #334155; }
+
+        /* Badges */
+        .stage-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 600;
         }
-        .supertrend-deviation.positive { color: #10b981; }
-        .supertrend-deviation.negative { color: #ef4444; }
-        .supertrend-change {
-            font-size: 0.75rem;
-            color: #94a3b8;
+        .stage-badge.super-trend { background: #10b981; color: white; }
+        .stage-badge.early-breakout { background: #3b82f6; color: white; }
+        .stage-badge.burgeoning { background: #8b5cf6; color: white; }
+        .stage-badge.building { background: #f59e0b; color: black; }
+        .stage-badge.consolidation { background: #6b7280; color: white; }
+        .stage-badge.bear-volatile { background: #ef4444; color: white; }
+
+        .priority-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 600;
         }
-        .supertrend-change.up { color: #10b981; }
-        .supertrend-change.down { color: #ef4444; }
+        .priority-badge.HIGH { background: #10b981; color: white; }
+        .priority-badge.MEDIUM { background: #3b82f6; color: white; }
+        .priority-badge.LOW { background: #f59e0b; color: black; }
+        .priority-badge.AVOID { background: #ef4444; color: white; }
+
+        /* Score Bar */
+        .score-bar {
+            width: 60px;
+            height: 6px;
+            background: #475569;
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            border-radius: 3px;
+        }
+
+        .deviation-positive { color: #10b981; }
+        .deviation-negative { color: #ef4444; }
+
+        .loading { text-align: center; padding: 2rem; color: #94a3b8; }
+
+        @media (max-width: 1100px) {
+            .summary-cards { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 900px) {
+            .summary-cards { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .filters { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="container" style="padding: 0;">
-            <h1><span class="market-flag">🪙</span>Momentum Scanner</h1>
-            <p>Early Breakout & Momentum Candidates (AutoML Crypto)</p>
+            <h1><span class="market-flag">&#129689;</span>Momentum Scanner</h1>
+            <p>Early Breakout & Momentum Candidates (Crypto)</p>
             <nav class="nav-links">
                 <a href="index.html">Overview</a>
                 <a href="breakout.html" class="active">Breakout</a>
@@ -232,24 +182,34 @@
     </div>
 
     <div class="container">
-        <div class="data-freshness" id="dataFreshness">Data as of: Loading...</div>
-
-        <!-- Summary Cards -->
-        <div class="summary-grid" id="summaryGrid">
-            <div class="loading">Loading summary...</div>
+        <!-- Summary Cards (5 cards) -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="summary-value green" id="supertrendCount">--</div>
+                <div class="summary-label">Super Trend</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value blue" id="earlyBreakoutCount">--</div>
+                <div class="summary-label">Early Breakout</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value yellow" id="highPriorityCount">--</div>
+                <div class="summary-label">High Priority</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value pink" id="longTermTrendCount">--</div>
+                <div class="summary-label">Long Term Trend</div>
+                <div class="summary-date">BB(220,2) Breakout</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value purple" id="totalCount">--</div>
+                <div class="summary-label">Total Categories</div>
+                <div class="summary-date" id="dataDate">Data as of: --</div>
+            </div>
         </div>
 
-        <!-- Daily Summary Section -->
-        <div class="section" id="dailySummarySection">
-            <h2>
-                📊 Daily Top Performers (AutoML)
-                <span id="dailySummaryDate" style="font-size: 0.75rem; color: #94a3b8; margin-left: 1rem;"></span>
-            </h2>
-            <div id="dailySummaryContent" class="loading">Loading...</div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="charts-row">
+        <!-- Charts -->
+        <div class="charts-grid">
             <div class="chart-container">
                 <h3>Stage Distribution</h3>
                 <div class="chart-wrapper">
@@ -264,50 +224,50 @@
             </div>
         </div>
 
-        <!-- Long Term Trend Breakout (BB 220, 2.0) -->
-        <div class="section" id="supertrendSection">
-            <h2>
-                📈 Long Term Trend Breakout
-                <span style="font-size: 0.75rem; color: #f472b6; margin-left: 0.5rem;">BB(220, 2.0) Crossover</span>
-                <span id="supertrendDate" style="font-size: 0.75rem; color: #94a3b8; margin-left: 1rem;"></span>
-                <span id="supertrendCount" style="font-size: 0.875rem; color: #3b82f6; margin-left: 0.5rem;"></span>
-            </h2>
-            <table id="supertrendTable" class="display" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Ticker</th>
-                        <th>Score</th>
-                        <th>Stage</th>
-                        <th>Priority</th>
-                        <th>Strategy</th>
-                        <th>Sector</th>
-                        <th>Deviation</th>
-                    </tr>
-                </thead>
-                <tbody id="supertrendTableBody">
-                    <tr><td colspan="7" class="loading">Loading SuperTrend candidates...</td></tr>
-                </tbody>
-            </table>
+        <!-- Daily Top Performers -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Daily Top Performers</span>
+                <span id="performersDate" style="color: #94a3b8; font-size: 0.875rem;"></span>
+            </div>
+            <div id="performersTable">
+                <div class="loading">Loading top performers...</div>
+            </div>
         </div>
 
-        <!-- Filters & Table -->
-        <div class="section">
-            <h2>Breakout Candidates</h2>
+        <!-- Long Term Trend Breakout (BB 220,2 Crossover) -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Long Term Trend Breakout</span>
+                <span id="bbNote" style="color: #f472b6; font-size: 0.75rem;">BB(220, 2.0) Crossover</span>
+            </div>
+            <div id="longTermTrendTable">
+                <div class="loading">Loading BB crossover candidates...</div>
+            </div>
+        </div>
+
+        <!-- Breakout Candidates -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Breakout Candidates</span>
+                <span id="resultCount" style="color: #94a3b8; font-size: 0.875rem;">Loading...</span>
+            </div>
             <div class="filters">
                 <div class="filter-group">
-                    <label>Stage</label>
-                    <select id="filterStage">
+                    <label class="filter-label">Stage</label>
+                    <select id="stageFilter" onchange="loadBreakoutCandidates()">
                         <option value="">All Stages</option>
                         <option value="Super Trend">Super Trend</option>
                         <option value="Early Breakout">Early Breakout</option>
                         <option value="Burgeoning">Burgeoning</option>
                         <option value="Building">Building</option>
                         <option value="Consolidation">Consolidation</option>
+                        <option value="Bear Volatile">Bear Volatile</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Priority</label>
-                    <select id="filterPriority">
+                    <label class="filter-label">Priority</label>
+                    <select id="priorityFilter" onchange="loadBreakoutCandidates()">
                         <option value="">All</option>
                         <option value="HIGH">HIGH</option>
                         <option value="MEDIUM">MEDIUM</option>
@@ -315,30 +275,17 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Min Score</label>
-                    <input type="number" id="filterMinScore" min="0" max="100" placeholder="0">
+                    <label class="filter-label">Min Score</label>
+                    <input type="number" id="minScoreFilter" placeholder="0" min="0" max="100" onchange="loadBreakoutCandidates()">
                 </div>
                 <div class="filter-group">
-                    <label>Theme</label>
-                    <input type="text" id="filterTheme" placeholder="e.g., Semiconductors">
+                    <label class="filter-label">Category</label>
+                    <input type="text" id="categoryFilter" placeholder="e.g., defi" onchange="loadBreakoutCandidates()">
                 </div>
             </div>
-
-            <table id="breakoutTable" class="display" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Ticker</th>
-                        <th>Score</th>
-                        <th>Stage</th>
-                        <th>Priority</th>
-                        <th>Strategy</th>
-                        <th>Theme</th>
-                    </tr>
-                </thead>
-                <tbody id="breakoutTableBody">
-                    <tr><td colspan="6" class="loading">Loading candidates...</td></tr>
-                </tbody>
-            </table>
+            <div id="breakoutTable">
+                <div class="loading">Loading breakout candidates...</div>
+            </div>
         </div>
     </div>
 
@@ -346,367 +293,297 @@
         const API_BASE = window.location.origin;
         let stageChart = null;
         let returnsChart = null;
-        let dataTable = null;
 
-        async function init() {
-            // Run all loads independently to prevent one failure from blocking others
-            try { await loadSummary(); } catch (e) { console.error('loadSummary error:', e); }
-            try { await loadDailySummary(); } catch (e) { console.error('loadDailySummary error:', e); }
-            try { await loadSupertrendCandidates(); } catch (e) { console.error('loadSupertrendCandidates error:', e); }
-            try { await loadCharts(); } catch (e) { console.error('loadCharts error:', e); }
-            try { await loadCandidates(); } catch (e) { console.error('loadCandidates error:', e); }
-            setupFilters();
+        async function loadDashboard() {
+            await Promise.all([
+                loadSummaryCards(),
+                loadStageDistribution(),
+                loadExpectedReturns(),
+                loadDailySummary(),
+                loadLongTermTrendBreakout(),
+                loadBreakoutCandidates()
+            ]);
         }
 
-        let supertrendTable = null;
-
-        async function loadSupertrendCandidates() {
-            try {
-                const response = await fetch(`${API_BASE}/api/breakout/supertrend-candidates`);
-                const data = await response.json();
-
-                document.getElementById('supertrendDate').textContent = data.date || '';
-                document.getElementById('supertrendCount').textContent = data.count ? `(${data.count} tickers)` : '';
-
-                if (!data.candidates || data.candidates.length === 0) {
-                    document.getElementById('supertrendTableBody').innerHTML =
-                        '<tr><td colspan="7" style="text-align:center; color: #94a3b8;">No BB crossover signals today</td></tr>';
-                    return;
-                }
-
-                // Build table rows (same format as Breakout Candidates)
-                const rowsHtml = data.candidates.map(c => {
-                    const priorityClass = c.priority === 'HIGH' ? 'badge-high' :
-                                         c.priority === 'MEDIUM' ? 'badge-medium' : 'badge-low';
-                    const barWidth = Math.min(c.score, 100);
-                    const devColor = c.deviation >= 0 ? '#10b981' : '#ef4444';
-                    const devSign = c.deviation >= 0 ? '+' : '';
-
-                    return `
-                        <tr>
-                            <td><strong style="color: #3b82f6;">${c.ticker}</strong></td>
-                            <td>
-                                ${c.score}
-                                <div class="score-bar"><div class="score-fill" style="width: ${barWidth}%;"></div></div>
-                            </td>
-                            <td>${c.stage}</td>
-                            <td><span class="badge ${priorityClass}">${c.priority}</span></td>
-                            <td>${c.strategy}</td>
-                            <td>${c.sector || c.category || '-'}</td>
-                            <td style="color: ${devColor}; font-weight: 600;">${devSign}${c.deviation.toFixed(2)}%</td>
-                        </tr>
-                    `;
-                }).join('');
-
-                document.getElementById('supertrendTableBody').innerHTML = rowsHtml;
-
-                // Initialize DataTable
-                if (supertrendTable) {
-                    supertrendTable.destroy();
-                }
-                supertrendTable = $('#supertrendTable').DataTable({
-                    pageLength: 10,
-                    order: [[1, 'desc']],
-                    language: {
-                        search: "Search:",
-                        lengthMenu: "Show _MENU_ entries"
-                    }
-                });
-
-            } catch (error) {
-                console.error('Error loading supertrend candidates:', error);
-                document.getElementById('supertrendTableBody').innerHTML =
-                    '<tr><td colspan="7" style="text-align:center; color: #ef4444;">Error loading SuperTrend data</td></tr>';
-            }
-        }
-
-        async function loadSummary() {
+        async function loadSummaryCards() {
             try {
                 const response = await fetch(`${API_BASE}/api/breakout/summary-cards`);
                 const data = await response.json();
 
-                document.getElementById('summaryGrid').innerHTML = `
-                    <div class="summary-card positive">
-                        <div class="summary-label">Super Trend</div>
-                        <div class="summary-value" style="color: #10b981;">${data.supertrend || 0}</div>
-                    </div>
-                    <div class="summary-card positive">
-                        <div class="summary-label">Early Breakout</div>
-                        <div class="summary-value" style="color: #3b82f6;">${data.early_breakout || 0}</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-label">High Priority</div>
-                        <div class="summary-value" style="color: #f59e0b;">${data.high_priority || 0}</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-label">Long Term Trend</div>
-                        <div class="summary-value" style="color: #f472b6;">${data.long_term_trend || 0}</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-label">Total Categories</div>
-                        <div class="summary-value" style="color: #a855f7;">${data.total || 0}</div>
-                    </div>
-                `;
-
-                document.getElementById('dataFreshness').innerHTML = `Data as of: ${data.date || new Date().toLocaleDateString('en-US')}`;
+                document.getElementById('supertrendCount').textContent = data.supertrend || 0;
+                document.getElementById('earlyBreakoutCount').textContent = data.early_breakout || 0;
+                document.getElementById('highPriorityCount').textContent = data.high_priority || 0;
+                document.getElementById('longTermTrendCount').textContent = data.long_term_trend || 0;
+                document.getElementById('totalCount').textContent = data.total || 0;
+                document.getElementById('dataDate').textContent = `Data as of: ${data.date || '--'}`;
             } catch (error) {
                 console.error('Error loading summary:', error);
-                // Fallback to stages endpoint
-                try {
-                    const stagesRes = await fetch(`${API_BASE}/api/breakout/stages`);
-                    const stagesData = await stagesRes.json();
-                    const superTrend = stagesData.stages.find(s => s.name === 'Super Trend')?.count || 0;
-                    const earlyBreakout = stagesData.stages.find(s => s.name === 'Early Breakout')?.count || 0;
-                    const high = stagesData.priorities.find(p => p.name === 'HIGH')?.count || 0;
-
-                    document.getElementById('summaryGrid').innerHTML = `
-                        <div class="summary-card positive">
-                            <div class="summary-label">Super Trend</div>
-                            <div class="summary-value">${superTrend}</div>
-                        </div>
-                        <div class="summary-card positive">
-                            <div class="summary-label">Early Breakout</div>
-                            <div class="summary-value">${earlyBreakout}</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-label">High Priority</div>
-                            <div class="summary-value">${high}</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-label">Total Candidates</div>
-                            <div class="summary-value">${stagesData.total}</div>
-                        </div>
-                    `;
-                } catch (e) {
-                    console.error('Fallback also failed:', e);
-                }
             }
         }
 
-        async function loadDailySummary() {
+        async function loadStageDistribution() {
             try {
-                const response = await fetch(`${API_BASE}/api/breakout/daily-summary`);
-                if (!response.ok) throw new Error('Daily summary not available');
+                const response = await fetch(`${API_BASE}/api/breakout/stages`);
                 const data = await response.json();
 
-                document.getElementById('dailySummaryDate').textContent = data.date || '';
+                const ctx = document.getElementById('stageChart').getContext('2d');
+                if (stageChart) stageChart.destroy();
 
-                const content = document.getElementById('dailySummaryContent');
-                if (!data.top_performers || data.top_performers.length === 0) {
-                    content.innerHTML = '<p style="color: #94a3b8;">No data available</p>';
-                    return;
-                }
-
-                const getRegimeBadge = (regime) => {
-                    const colors = {
-                        'Bull Quiet': 'background: #10b981;',
-                        'Bull Volatile': 'background: #22c55e;',
-                        'Transition': 'background: #f59e0b;',
-                        'Ranging': 'background: #64748b;',
-                        'strong_bullish': 'background: #059669;',
-                        'Bear Quiet': 'background: #ef4444;',
-                        'Bear Volatile': 'background: #dc2626;'
-                    };
-                    return `<span class="badge" style="${colors[regime] || 'background: #475569;'} color: white;">${regime}</span>`;
+                const stages = data.stages || [];
+                const colors = {
+                    'Super Trend': '#10b981',
+                    'Early Breakout': '#3b82f6',
+                    'Burgeoning': '#8b5cf6',
+                    'Building': '#f59e0b',
+                    'Consolidation': '#6b7280',
+                    'Bear Volatile': '#ef4444',
                 };
 
-                const formatSignals = (signals) => {
-                    if (!signals) return '-';
-                    return `<span style="font-size: 0.7rem; color: #94a3b8;">
-                        M:${signals.model_prediction?.toFixed(2) || '-'}
-                        R:${signals.regime_signal?.toFixed(1) || '-'}
-                        T:${signals.tsf_alignment?.toFixed(1) || '-'}
-                    </span>`;
-                };
-
-                content.innerHTML = `
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: #334155; text-align: left;">
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Rank</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Ticker</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Name</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Sector</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Score</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Regime</th>
-                                    <th style="padding: 0.75rem; border-bottom: 2px solid #475569;">Signals</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.top_performers.map((p, idx) => `
-                                    <tr style="border-bottom: 1px solid #334155;">
-                                        <td style="padding: 0.75rem; color: #94a3b8;">${idx + 1}</td>
-                                        <td style="padding: 0.75rem;"><strong>${p.ticker}</strong></td>
-                                        <td style="padding: 0.75rem; color: #cbd5e1;">${p.name || '-'}</td>
-                                        <td style="padding: 0.75rem; color: #94a3b8; font-size: 0.85rem;">${p.sector || '-'}</td>
-                                        <td style="padding: 0.75rem;">
-                                            <span style="color: ${p.composite_score >= 0.5 ? '#10b981' : '#f59e0b'}; font-weight: bold;">
-                                                ${(p.composite_score * 100).toFixed(1)}%
-                                            </span>
-                                        </td>
-                                        <td style="padding: 0.75rem;">${getRegimeBadge(p.regime_type)}</td>
-                                        <td style="padding: 0.75rem;">${formatSignals(p.signals)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p style="margin-top: 1rem; font-size: 0.75rem; color: #64748b;">
-                        ${data.note || ''} | Total: ${data.total_tickers} tickers evaluated
-                    </p>
-                `;
-            } catch (error) {
-                console.error('Error loading daily summary:', error);
-                document.getElementById('dailySummaryContent').innerHTML = '<p style="color: #94a3b8;">Daily summary not available</p>';
-            }
-        }
-
-        async function loadCharts() {
-            try {
-                // Stage distribution
-                const stagesRes = await fetch(`${API_BASE}/api/breakout/stages`);
-                const stagesData = await stagesRes.json();
-
-                const stageCtx = document.getElementById('stageChart').getContext('2d');
-                stageChart = new Chart(stageCtx, {
+                stageChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: stagesData.stages.map(s => s.name),
+                        labels: stages.map(s => s.name),
                         datasets: [{
-                            data: stagesData.stages.map(s => s.count),
-                            backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#64748b', '#ef4444']
+                            data: stages.map(s => s.count),
+                            backgroundColor: stages.map(s => colors[s.name] || '#475569'),
+                            borderWidth: 0
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } }
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#94a3b8', font: { size: 11 } }
+                            }
+                        }
                     }
                 });
+            } catch (error) {
+                console.error('Error loading stage distribution:', error);
+            }
+        }
 
-                // Expected returns
-                const returnsRes = await fetch(`${API_BASE}/api/breakout/expected-returns`);
-                const returnsData = await returnsRes.json();
+        async function loadExpectedReturns() {
+            try {
+                const response = await fetch(`${API_BASE}/api/breakout/expected-returns`);
+                const data = await response.json();
 
-                const returnsCtx = document.getElementById('returnsChart').getContext('2d');
-                returnsChart = new Chart(returnsCtx, {
+                const ctx = document.getElementById('returnsChart').getContext('2d');
+                if (returnsChart) returnsChart.destroy();
+
+                const stages = data.stages || [];
+                returnsChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: returnsData.stages.map(s => s.stage),
+                        labels: stages.map(s => s.stage),
                         datasets: [{
-                            label: '20-Day Return (%)',
-                            data: returnsData.stages.map(s => s.return_20d),
-                            backgroundColor: returnsData.stages.map(s => s.return_20d > 0 ? '#10b981' : '#ef4444')
+                            label: 'Expected 20D Return %',
+                            data: stages.map(s => s.return_20d),
+                            backgroundColor: stages.map(s => s.return_20d >= 0 ? '#10b981' : '#ef4444'),
+                            borderWidth: 0
                         }]
                     },
                     options: {
                         indexAxis: 'y',
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        plugins: {
+                            legend: { display: false }
+                        },
                         scales: {
-                            x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-                            y: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                            x: {
+                                grid: { color: '#334155' },
+                                ticks: { color: '#94a3b8', font: { size: 11 } }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 11 } }
+                            }
                         }
                     }
                 });
             } catch (error) {
-                console.error('Error loading charts:', error);
+                console.error('Error loading expected returns:', error);
             }
         }
 
-        async function loadCandidates(filters = {}) {
+        async function loadDailySummary() {
             try {
-                let url = `${API_BASE}/api/breakout/candidates?limit=500`;
-                if (filters.stage) url += `&stage=${encodeURIComponent(filters.stage)}`;
-                if (filters.priority) url += `&priority=${filters.priority}`;
-                if (filters.minScore) url += `&min_score=${filters.minScore}`;
-                if (filters.theme) url += `&theme=${encodeURIComponent(filters.theme)}`;
+                const response = await fetch(`${API_BASE}/api/breakout/daily-summary`);
+                const data = await response.json();
 
+                const container = document.getElementById('performersTable');
+                document.getElementById('performersDate').textContent = data.date ? `Date: ${data.date}` : '';
+
+                if (data.top_performers && data.top_performers.length > 0) {
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Ticker</th>
+                                    <th>Category</th>
+                                    <th>Score</th>
+                                    <th>Tier</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.top_performers.forEach(p => {
+                        const scorePct = Math.min(100, p.composite_score * 100);
+                        html += `
+                            <tr>
+                                <td><strong>#${p.rank}</strong></td>
+                                <td><strong>${p.ticker}</strong></td>
+                                <td>${p.category || '-'}</td>
+                                <td>
+                                    ${(p.composite_score * 100).toFixed(1)}
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${scorePct}%"></div>
+                                    </div>
+                                </td>
+                                <td>${p.regime_type || '-'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">Daily summary not available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading daily summary:', error);
+                document.getElementById('performersTable').innerHTML = '<p style="color: #64748b; text-align: center;">No daily data available</p>';
+            }
+        }
+
+        async function loadLongTermTrendBreakout() {
+            try {
+                const response = await fetch(`${API_BASE}/api/breakout/supertrend-candidates`);
+                const data = await response.json();
+
+                const container = document.getElementById('longTermTrendTable');
+
+                if (data.candidates && data.candidates.length > 0) {
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Category</th>
+                                    <th>Score</th>
+                                    <th>Priority</th>
+                                    <th>Deviation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.candidates.forEach(t => {
+                        const deviationClass = t.deviation >= 0 ? 'deviation-positive' : 'deviation-negative';
+                        const deviationSign = t.deviation >= 0 ? '+' : '';
+                        const scorePct = Math.min(100, t.score);
+
+                        html += `
+                            <tr>
+                                <td><strong style="color: #10b981;">${t.ticker}</strong></td>
+                                <td style="font-size: 0.8rem;">${t.category || '-'}</td>
+                                <td>
+                                    ${t.score}
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${scorePct}%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="priority-badge ${t.priority}">${t.priority}</span></td>
+                                <td class="${deviationClass}">${deviationSign}${t.deviation.toFixed(2)}%</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No BB(220,2) crossover signals today</p>';
+                }
+            } catch (error) {
+                console.error('Error loading Long Term Trend:', error);
+                document.getElementById('longTermTrendTable').innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading BB crossover data</p>';
+            }
+        }
+
+        async function loadBreakoutCandidates() {
+            const stage = document.getElementById('stageFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const minScore = document.getElementById('minScoreFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+
+            let url = `${API_BASE}/api/breakout/candidates?limit=100`;
+            if (stage) url += `&stage=${encodeURIComponent(stage)}`;
+            if (priority) url += `&priority=${encodeURIComponent(priority)}`;
+            if (minScore) url += `&min_score=${minScore}`;
+            if (category) url += `&theme=${encodeURIComponent(category)}`;
+
+            try {
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (dataTable) dataTable.destroy();
+                document.getElementById('resultCount').textContent = `${data.count || 0} of ${data.total_available || 0} shown`;
 
-                const getStageBadge = (stage) => {
-                    const colors = {
-                        'Super Trend': 'background: #3b82f6;',
-                        'Early Breakout': 'background: #8b5cf6;',
-                        'Burgeoning': 'background: #10b981;',
-                        'Building': 'background: #f59e0b;',
-                        'Consolidation': 'background: #64748b;',
-                        'Bear Volatile': 'background: #ef4444;'
-                    };
-                    return `<span class="badge" style="${colors[stage] || 'background: #475569;'} color: white;">${stage}</span>`;
-                };
+                const container = document.getElementById('breakoutTable');
+                if (data.candidates && data.candidates.length > 0) {
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ticker</th>
+                                    <th>Score</th>
+                                    <th>Stage</th>
+                                    <th>Priority</th>
+                                    <th>Strategy</th>
+                                    <th>Category</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
 
-                const getStrategyBadge = (strategy) => {
-                    if (!strategy || strategy === '-') return '-';
-                    const colors = {
-                        'Bull Quiet': 'background: #10b981;',
-                        'Transition': 'background: #f59e0b;',
-                        'Ranging': 'background: #64748b;'
-                    };
-                    return `<span class="badge" style="${colors[strategy] || 'background: #475569;'} color: white;">${strategy}</span>`;
-                };
+                    data.candidates.forEach(c => {
+                        const stageClass = c.stage.toLowerCase().replace(' ', '-');
+                        const scorePct = Math.min(100, c.score);
 
-                const tbody = document.getElementById('breakoutTableBody');
-                tbody.innerHTML = data.candidates.map(c => `
-                    <tr>
-                        <td><strong>${c.ticker}</strong></td>
-                        <td>
-                            <span style="color: ${c.score >= 50 ? '#10b981' : '#f59e0b'}; font-weight: bold;">${c.score}</span>
-                            <div class="score-bar"><div class="score-fill" style="width: ${c.score}%"></div></div>
-                        </td>
-                        <td>${getStageBadge(c.stage)}</td>
-                        <td><span class="badge badge-${c.priority.toLowerCase()}">${c.priority}</span></td>
-                        <td>${getStrategyBadge(c.strategy)}</td>
-                        <td style="font-size: 0.85rem; color: #94a3b8;">${c.themes || '-'}</td>
-                    </tr>
-                `).join('');
+                        html += `
+                            <tr>
+                                <td><strong>${c.ticker}</strong></td>
+                                <td>
+                                    ${c.score}
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${scorePct}%"></div>
+                                    </div>
+                                </td>
+                                <td><span class="stage-badge ${stageClass}">${c.stage}</span></td>
+                                <td><span class="priority-badge ${c.priority}">${c.priority}</span></td>
+                                <td>${c.strategy || '-'}</td>
+                                <td>${c.themes || '-'}</td>
+                            </tr>
+                        `;
+                    });
 
-                dataTable = $('#breakoutTable').DataTable({
-                    pageLength: 25,
-                    order: [[1, 'desc']],
-                    language: { search: "Search:", lengthMenu: "Show _MENU_ entries" }
-                });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No candidates found with current filters</p>';
+                }
             } catch (error) {
-                console.error('Error loading candidates:', error);
-                document.getElementById('breakoutTableBody').innerHTML = `<tr><td colspan="6" class="loading">Error: ${error.message}</td></tr>`;
+                console.error('Error loading breakout candidates:', error);
+                document.getElementById('breakoutTable').innerHTML = '<p style="color: #ef4444; text-align: center;">Error loading data</p>';
             }
         }
 
-        function setupFilters() {
-            const applyFilters = () => {
-                loadCandidates({
-                    stage: document.getElementById('filterStage').value,
-                    priority: document.getElementById('filterPriority').value,
-                    minScore: document.getElementById('filterMinScore').value,
-                    theme: document.getElementById('filterTheme').value
-                });
-            };
-
-            document.getElementById('filterStage').addEventListener('change', applyFilters);
-            document.getElementById('filterPriority').addEventListener('change', applyFilters);
-            document.getElementById('filterMinScore').addEventListener('change', applyFilters);
-            document.getElementById('filterTheme').addEventListener('input', debounce(applyFilters, 500));
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        }
-
-        // Run init after DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
+        // Initialize
+        loadDashboard();
     </script>
 </body>
 </html>
