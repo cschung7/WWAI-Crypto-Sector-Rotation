@@ -27,6 +27,25 @@ HAS_PRICE_DATA = PRICE_DIR.exists()
 
 # Cache for category lookup
 _category_cache = None
+# Cache for price data (used on Railway when PRICE_DIR doesn't exist)
+_price_cache = None
+
+
+def load_price_cache() -> dict:
+    """Load price cache from data directory (for Railway deployment)"""
+    global _price_cache
+    if _price_cache is None:
+        cache_file = DATA_DIR / "price_cache.json"
+        if cache_file.exists():
+            try:
+                with open(cache_file, 'r') as f:
+                    data = json.load(f)
+                    _price_cache = data.get('prices', {})
+            except Exception:
+                _price_cache = {}
+        else:
+            _price_cache = {}
+    return _price_cache
 
 
 def get_category_mapping() -> dict:
@@ -101,6 +120,16 @@ def load_bb_filtered_tickers() -> Dict:
 
 def get_ticker_price_info(ticker: str) -> Dict:
     """Get latest price info for a crypto ticker"""
+    # If no local price files, use price cache
+    if not HAS_PRICE_DATA:
+        price_cache = load_price_cache()
+        # Try ticker as-is or cleaned version
+        clean_ticker = ticker.replace('-USD', '').upper()
+        price = price_cache.get(clean_ticker, price_cache.get(ticker, 0))
+        if price:
+            return {'close': price}
+        return {}
+
     # Crypto files are named TICKER-USD.csv
     price_file = PRICE_DIR / f"{ticker}-USD.csv"
     if not price_file.exists():
