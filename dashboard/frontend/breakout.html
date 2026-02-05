@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Momentum Scanner | Crypto Sector Rotation</title>
-    <!-- Version: 2026.02.03.v3 - Added SuperTrend section -->
+    <!-- Version: 2026.02.06.v1 - Added date dropdowns for damped market -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -228,7 +228,12 @@
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Daily Top Performers</span>
-                <span id="performersDate" style="color: #94a3b8; font-size: 0.875rem;"></span>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <select id="performersDateFilter" onchange="loadDailySummary()" style="background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem;">
+                        <option value="">Loading dates...</option>
+                    </select>
+                    <span id="performersDate" style="color: #94a3b8; font-size: 0.875rem;"></span>
+                </div>
             </div>
             <div id="performersTable">
                 <div class="loading">Loading top performers...</div>
@@ -239,7 +244,12 @@
         <div class="card">
             <div class="card-header">
                 <span class="card-title">🚀 SuperTrend Candidates</span>
-                <span id="supertrendNote" style="color: #10b981; font-size: 0.75rem;">High Momentum Tokens</span>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <select id="supertrendDateFilter" onchange="loadSupertrendCandidates()" style="background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem;">
+                        <option value="">Loading dates...</option>
+                    </select>
+                    <span id="supertrendNote" style="color: #10b981; font-size: 0.75rem;">High Momentum Tokens</span>
+                </div>
             </div>
             <div id="supertrendTable">
                 <div class="loading">Loading SuperTrend candidates...</div>
@@ -250,7 +260,12 @@
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Long Term Trend Breakout</span>
-                <span id="bbNote" style="color: #f472b6; font-size: 0.75rem;">BB(220, 2.0) Crossover</span>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <select id="bbCrossoverDateFilter" onchange="loadLongTermTrendBreakout()" style="background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.875rem;">
+                        <option value="">Loading dates...</option>
+                    </select>
+                    <span id="bbNote" style="color: #f472b6; font-size: 0.75rem;">BB(220, 2.0) Crossover</span>
+                </div>
             </div>
             <div id="longTermTrendTable">
                 <div class="loading">Loading BB crossover candidates...</div>
@@ -304,8 +319,45 @@
         const API_BASE = window.location.origin;
         let stageChart = null;
         let returnsChart = null;
+        let availableDates = [];
+
+        async function loadAvailableDates() {
+            try {
+                const response = await fetch(`${API_BASE}/api/overview/available-dates`);
+                const data = await response.json();
+                availableDates = data.dates || [];
+
+                // Populate date dropdowns
+                const performersSelect = document.getElementById('performersDateFilter');
+                const supertrendSelect = document.getElementById('supertrendDateFilter');
+                const bbCrossoverSelect = document.getElementById('bbCrossoverDateFilter');
+
+                if (availableDates.length > 0 && availableDates[0] !== "No data available") {
+                    const options = availableDates.map((date, idx) =>
+                        `<option value="${date}" ${idx === 0 ? 'selected' : ''}>${date}</option>`
+                    ).join('');
+
+                    performersSelect.innerHTML = options;
+                    supertrendSelect.innerHTML = options;
+                    bbCrossoverSelect.innerHTML = options;
+                } else {
+                    // Handle case where crypto market is damped with no data
+                    const placeholder = '<option value="">No signals (market damped)</option>';
+                    performersSelect.innerHTML = placeholder;
+                    supertrendSelect.innerHTML = placeholder;
+                    bbCrossoverSelect.innerHTML = placeholder;
+                }
+            } catch (error) {
+                console.error('Error loading dates:', error);
+                const errorOption = '<option value="">Error loading dates</option>';
+                document.getElementById('performersDateFilter').innerHTML = errorOption;
+                document.getElementById('supertrendDateFilter').innerHTML = errorOption;
+                document.getElementById('bbCrossoverDateFilter').innerHTML = errorOption;
+            }
+        }
 
         async function loadDashboard() {
+            await loadAvailableDates();
             await Promise.all([
                 loadSummaryCards(),
                 loadStageDistribution(),

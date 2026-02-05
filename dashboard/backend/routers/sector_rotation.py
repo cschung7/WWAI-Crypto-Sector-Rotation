@@ -89,6 +89,31 @@ async def get_summary() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/available-dates")
+async def get_available_dates() -> Dict[str, List[str]]:
+    """Get list of available dates from data files"""
+    try:
+        # Get all consolidated analysis files
+        files = sorted(DATA_DIR.glob("consolidated_ticker_analysis_*.json"), reverse=True)
+        dates = []
+
+        for file in files:
+            # Extract date from filename: consolidated_ticker_analysis_20260202.json
+            date_str = file.stem.replace("consolidated_ticker_analysis_", "")
+            if len(date_str) == 8 and date_str.isdigit():
+                # Format as YYYY-MM-DD
+                formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                dates.append(formatted_date)
+
+        # If no dates found, return a placeholder for the damped market situation
+        if not dates:
+            dates = ["No data available"]
+
+        return {"dates": dates}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/top-picks")
 async def get_top_picks(limit: int = 10) -> List[Dict]:
     """Get top stock picks across all themes"""
