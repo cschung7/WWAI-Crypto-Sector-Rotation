@@ -373,6 +373,7 @@
                             <thead>
                                 <tr>
                                     <th>Ticker</th>
+                                    <th>Price</th>
                                     <th>Score</th>
                                     <th>Stage</th>
                                     <th>Priority</th>
@@ -388,10 +389,12 @@
                         const deviationClass = c.deviation >= 0 ? 'deviation-positive' : 'deviation-negative';
                         const deviationSign = c.deviation >= 0 ? '+' : '';
                         const scorePct = Math.min(100, c.score);
+                        const priceStr = c.close ? (c.close < 0.01 ? c.close.toExponential(2) : c.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})) : '-';
 
                         html += `
                             <tr>
                                 <td><strong style="color: #3b82f6;">${c.ticker}</strong></td>
+                                <td style="color: #10b981;">$${priceStr}</td>
                                 <td>
                                     ${c.score}
                                     <div class="score-bar">
@@ -535,6 +538,7 @@
                                 <tr>
                                     <th>Rank</th>
                                     <th>Ticker</th>
+                                    <th>Price</th>
                                     <th>Category</th>
                                     <th>Score</th>
                                     <th>Tier</th>
@@ -545,10 +549,12 @@
 
                     data.top_performers.forEach(p => {
                         const scorePct = Math.min(100, p.composite_score * 100);
+                        const priceStr = p.close ? (p.close < 0.01 ? p.close.toExponential(2) : p.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})) : '-';
                         html += `
                             <tr>
                                 <td><strong>#${p.rank}</strong></td>
                                 <td><strong>${p.ticker}</strong></td>
+                                <td style="color: #10b981;">$${priceStr}</td>
                                 <td>${p.category || '-'}</td>
                                 <td>
                                     ${(p.composite_score * 100).toFixed(1)}
@@ -585,6 +591,7 @@
                             <thead>
                                 <tr>
                                     <th>Ticker</th>
+                                    <th>Price</th>
                                     <th>Category</th>
                                     <th>Score</th>
                                     <th>Priority</th>
@@ -598,10 +605,12 @@
                         const deviationClass = t.deviation >= 0 ? 'deviation-positive' : 'deviation-negative';
                         const deviationSign = t.deviation >= 0 ? '+' : '';
                         const scorePct = Math.min(100, t.score);
+                        const priceStr = t.close ? (t.close < 0.01 ? t.close.toExponential(2) : t.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})) : '-';
 
                         html += `
                             <tr>
                                 <td><strong style="color: #10b981;">${t.ticker}</strong></td>
+                                <td style="color: #10b981;">$${priceStr}</td>
                                 <td style="font-size: 0.8rem;">${t.category || '-'}</td>
                                 <td>
                                     ${t.score}
@@ -651,6 +660,7 @@
                             <thead>
                                 <tr>
                                     <th>Ticker</th>
+                                    <th>Price</th>
                                     <th>Score</th>
                                     <th>Stage</th>
                                     <th>Priority</th>
@@ -664,10 +674,12 @@
                     data.candidates.forEach(c => {
                         const stageClass = c.stage.toLowerCase().replace(' ', '-');
                         const scorePct = Math.min(100, c.score);
+                        const priceStr = c.close ? (c.close < 0.01 ? c.close.toExponential(2) : c.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4})) : '-';
 
                         html += `
                             <tr>
                                 <td><strong>${c.ticker}</strong></td>
+                                <td style="color: #10b981;">$${priceStr}</td>
                                 <td>
                                     ${c.score}
                                     <div class="score-bar">

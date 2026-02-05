@@ -385,6 +385,9 @@ async def get_breakout_candidates(
             else:
                 strategy = "-"
 
+            # Get price info
+            price_info = get_ticker_price_info(ticker) if HAS_PRICE_DATA else {}
+
             candidates.append({
                 'ticker': ticker,
                 'company': row.get('company', row.get('name', '')),
@@ -398,6 +401,7 @@ async def get_breakout_candidates(
                 'tier': row.get('tier', 'Tier 4'),
                 'in_green': in_green,
                 'in_tstop': in_tstop,
+                'close': price_info.get('close', 0),
             })
 
         # Apply filters
@@ -556,6 +560,9 @@ async def get_daily_summary(
 
         top_performers = []
         for idx, row in top_df.iterrows():
+            ticker = str(row['ticker']).replace('-USD', '').upper()
+            price_info = get_ticker_price_info(ticker) if HAS_PRICE_DATA else {}
+
             top_performers.append({
                 "rank": len(top_performers) + 1,
                 "ticker": row['ticker'],
@@ -569,7 +576,8 @@ async def get_daily_summary(
                     "bull_ratio": safe_float(row.get('bull_ratio', 0))
                 },
                 "in_green": False,
-                "in_tstop": False
+                "in_tstop": False,
+                "close": price_info.get('close', 0)
             })
 
         return {
