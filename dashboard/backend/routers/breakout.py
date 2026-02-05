@@ -414,8 +414,8 @@ async def get_breakout_candidates(
             else:
                 strategy = "-"
 
-            # Get price info
-            price_info = get_ticker_price_info(ticker) if HAS_PRICE_DATA else {}
+            # Get price info (uses cache on Railway when price files unavailable)
+            price_info = get_ticker_price_info(ticker)
 
             candidates.append({
                 'ticker': ticker,
@@ -590,7 +590,7 @@ async def get_daily_summary(
         top_performers = []
         for idx, row in top_df.iterrows():
             ticker = str(row['ticker']).replace('-USD', '').upper()
-            price_info = get_ticker_price_info(ticker) if HAS_PRICE_DATA else {}
+            price_info = get_ticker_price_info(ticker)
 
             top_performers.append({
                 "rank": len(top_performers) + 1,
